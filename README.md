@@ -300,7 +300,7 @@ Set `TESTING_MODE=true` in your `.env` file to:
 - Enable detailed logging
 - Use test database sessions
 
----
+--
 
 ## 📋 Response Classifications
 
