@@ -111,7 +111,7 @@ python test_neon_connection.py
 
 ```bash
 # Terminal 1 - Performance Dashboard (Port 8001)
-python start_dashboard.py
+python secure_dashboard_app.py
 
 # Terminal 2 - Slack Interaction Endpoint (Port 8002)
 python start_slack_endpoint.py
@@ -338,7 +338,7 @@ BookingAssistant/
 │   └── Test Case/                   # Automated testing suite
 ├── dashboard_app.py                 # FastAPI dashboard application
 ├── slack_interaction_endpoint.py    # Slack button interaction handler
-├── start_dashboard.py               # Dashboard startup script
+├── secure_dashboard_app.py          # Secure dashboard with authentication
 ├── start_slack_endpoint.py          # Slack endpoint startup script
 ├── setup_neon_database.py           # Database schema setup
 ├── test_neon_connection.py          # Database connectivity test
