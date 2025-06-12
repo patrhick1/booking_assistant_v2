@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookingAssistant Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .metric-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 400px;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+        .status-completed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-failed {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .table-responsive {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <i class="fas fa-chart-line me-2"></i>
+                BookingAssistant Dashboard
+            </span>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3" id="lastUpdate">
+                    Last updated: <span id="updateTime">Loading...</span>
+                </span>
+                <button class="btn btn-outline-light btn-sm" onclick="refreshDashboard()">
+                    <i class="fas fa-sync-alt" id="refreshIcon"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Refresh Indicator -->
+    <div id="refreshIndicator" class="refresh-indicator">
+        <i class="fas fa-spinner fa-spin me-2"></i>Updating dashboard...
+    </div>
+
+    <div class="container-fluid mt-4">
+        <!-- System Health Banner -->
+        <div id="healthBanner" class="alert alert-info d-none">
+            <i class="fas fa-info-circle me-2"></i>
+            <span id="healthMessage">System status loading...</span>
+        </div>
+
+        <!-- Overview Metrics -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-value" id="totalSessions">-</div>
+                    <div class="metric-label">Total Sessions</div>
+                    <small class="text-muted" id="sessionsTimeframe">Last 7 days</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-value" id="successRate">-%</div>
+                    <div class="metric-label">Success Rate</div>
+                    <small class="text-muted">Processing success</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-value" id="avgProcessingTime">-s</div>
+                    <div class="metric-label">Avg Processing Time</div>
+                    <small class="text-muted">Per email</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-value" id="errorRate">-%</div>
+                    <div class="metric-label">Error Rate</div>
+                    <small class="text-muted">Last hour</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <h5><i class="fas fa-clock me-2"></i>Processing Timeline</h5>
+                    <div id="timelineChart"></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="chart-container">
+                    <h5><i class="fas fa-tags me-2"></i>Classification Distribution</h5>
+                    <div id="classificationChart"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h5><i class="fas fa-cogs me-2"></i>Node Performance</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="nodePerformanceTable">
+                            <thead>
+                                <tr>
+                                    <th>Node</th>
+                                    <th>Executions</th>
+                                    <th>Avg Time (ms)</th>
+                                    <th>Success Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h5><i class="fas fa-file-alt me-2"></i>Document Extraction</h5>
+                    <div class="row">
+                        <div class="col-6 text-center">
+                            <div class="metric-value text-success" id="clientMatchRate">-%</div>
+                            <div class="metric-label">Client Match Rate</div>
+                        </div>
+                        <div class="col-6 text-center">
+                            <div class="metric-value text-info" id="docExtractionRate">-%</div>
+                            <div class="metric-label">Extraction Success</div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <h6>Top Matched Clients</h6>
+                        <div id="topClientsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Draft Quality Metrics -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <h5><i class="fas fa-edit me-2"></i>Draft Quality Metrics</h5>
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <div class="metric-value text-primary" id="avgDraftLength">-</div>
+                            <div class="metric-label">Avg Length</div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="metric-value text-success" id="templateScore">-</div>
+                            <div class="metric-label">Template Score</div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="metric-value text-info" id="contextUsage">-%</div>
+                            <div class="metric-label">Context Usage</div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="metric-value text-warning" id="totalDrafts">-</div>
+                            <div class="metric-label">Total Drafts</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="chart-container">
+                    <h5><i class="fas fa-chart-bar me-2"></i>Draft Length Distribution</h5>
+                    <canvas id="lengthDistributionChart" width="300" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Sessions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="chart-container">
+                    <h5><i class="fas fa-list me-2"></i>Recent Processing Sessions</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm" id="sessionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Sender</th>
+                                    <th>Subject</th>
+                                    <th>Classification</th>
+                                    <th>Duration</th>
+                                    <th>Status</th>
+                                    <th>Client Match</th>
+                                    <th>Quality</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Dashboard state
+        let isRefreshing = false;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshDashboard();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(refreshDashboard, 30000);
+        });
+
+        async function refreshDashboard() {
+            if (isRefreshing) return;
+            
+            isRefreshing = true;
+            showRefreshIndicator(true);
+            rotateRefreshIcon(true);
+
+            try {
+                await Promise.all([
+                    loadOverviewStats(),
+                    loadTimeline(),
+                    loadClassifications(),
+                    loadDocumentStats(),
+                    loadQualityMetrics(),
+                    loadNodePerformance(),
+                    loadRecentSessions(),
+                    loadSystemHealth()
+                ]);
+                
+                updateTimestamp();
+            } catch (error) {
+                console.error('Error refreshing dashboard:', error);
+                showError('Failed to refresh dashboard data');
+            } finally {
+                isRefreshing = false;
+                showRefreshIndicator(false);
+                rotateRefreshIcon(false);
+            }
+        }
+
+        async function loadOverviewStats() {
+            const response = await fetch('/api/overview?days=7');
+            const data = await response.json();
+            
+            document.getElementById('totalSessions').textContent = data.total_sessions;
+            document.getElementById('successRate').textContent = data.success_rate + '%';
+            document.getElementById('avgProcessingTime').textContent = data.avg_processing_time + 's';
+            document.getElementById('sessionsTimeframe').textContent = data.time_period;
+        }
+
+        async function loadTimeline() {
+            const response = await fetch('/api/timeline?hours=24');
+            const data = await response.json();
+            
+            if (data.timeline) {
+                const plotData = JSON.parse(data.timeline);
+                Plotly.newPlot('timelineChart', plotData.data, plotData.layout, {responsive: true});
+            }
+        }
+
+        async function loadClassifications() {
+            const response = await fetch('/api/classifications?days=30');
+            const data = await response.json();
+            
+            if (data.pie_chart) {
+                const plotData = JSON.parse(data.pie_chart);
+                Plotly.newPlot('classificationChart', plotData.data, plotData.layout, {responsive: true});
+            }
+        }
+
+        async function loadDocumentStats() {
+            const response = await fetch('/api/documents?days=30');
+            const data = await response.json();
+            
+            const stats = data.stats;
+            if (stats) {
+                const clientMatchRate = Math.round((stats.client_matches / Math.max(stats.total_attempts, 1)) * 100);
+                const extractionRate = Math.round((stats.successful_extractions / Math.max(stats.total_attempts, 1)) * 100);
+                
+                document.getElementById('clientMatchRate').textContent = clientMatchRate + '%';
+                document.getElementById('docExtractionRate').textContent = extractionRate + '%';
+            }
+            
+            // Top clients
+            const topClientsList = document.getElementById('topClientsList');
+            topClientsList.innerHTML = '';
+            data.top_clients.slice(0, 5).forEach(client => {
+                const item = document.createElement('div');
+                item.className = 'small mb-1';
+                item.innerHTML = `<strong>${client.client_name}</strong>: ${client.match_count} matches`;
+                topClientsList.appendChild(item);
+            });
+        }
+
+        async function loadQualityMetrics() {
+            const response = await fetch('/api/quality?days=30');
+            const data = await response.json();
+            
+            const stats = data.stats;
+            if (stats) {
+                document.getElementById('avgDraftLength').textContent = Math.round(stats.avg_length || 0);
+                document.getElementById('templateScore').textContent = (stats.avg_template_score || 0).toFixed(2);
+                document.getElementById('contextUsage').textContent = data.context_usage_rate + '%';
+                document.getElementById('totalDrafts').textContent = stats.total_drafts || 0;
+            }
+            
+            // Length distribution chart
+            if (data.length_distribution) {
+                const ctx = document.getElementById('lengthDistributionChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.length_distribution.map(d => d.length_category),
+                        datasets: [{
+                            data: data.length_distribution.map(d => d.count),
+                            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+        }
+
+        async function loadNodePerformance() {
+            const response = await fetch('/api/performance?days=7');
+            const data = await response.json();
+            
+            const tbody = document.querySelector('#nodePerformanceTable tbody');
+            tbody.innerHTML = '';
+            
+            data.node_stats.forEach(node => {
+                const row = tbody.insertRow();
+                const successRate = Math.round((node.successful / node.executions) * 100);
+                
+                row.innerHTML = `
+                    <td><strong>${node.node_name}</strong></td>
+                    <td>${node.executions}</td>
+                    <td>${Math.round(node.avg_duration)}</td>
+                    <td><span class="badge ${successRate > 95 ? 'bg-success' : successRate > 85 ? 'bg-warning' : 'bg-danger'}">${successRate}%</span></td>
+                `;
+            });
+        }
+
+        async function loadRecentSessions() {
+            const response = await fetch('/api/sessions?limit=20');
+            const data = await response.json();
+            
+            const tbody = document.querySelector('#sessionsTable tbody');
+            tbody.innerHTML = '';
+            
+            data.forEach(session => {
+                const row = tbody.insertRow();
+                const time = new Date(session.processing_started_at).toLocaleString();
+                const duration = session.total_duration_ms ? Math.round(session.total_duration_ms / 1000) + 's' : '-';
+                const status = session.status === 'completed' ? 'success' : 'danger';
+                const quality = session.template_adherence_score ? (session.template_adherence_score * 100).toFixed(0) + '%' : '-';
+                
+                row.innerHTML = `
+                    <td><small>${time}</small></td>
+                    <td><small>${session.sender_email || '-'}</small></td>
+                    <td><small>${session.subject ? session.subject.substring(0, 30) + '...' : '-'}</small></td>
+                    <td><span class="badge bg-primary">${session.classification || '-'}</span></td>
+                    <td>${duration}</td>
+                    <td><span class="badge bg-${status}">${session.status}</span></td>
+                    <td>${session.client_matched ? '✓' : '✗'} ${session.client_name || ''}</td>
+                    <td>${quality}</td>
+                `;
+            });
+        }
+
+        async function loadSystemHealth() {
+            const response = await fetch('/api/health');
+            const data = await response.json();
+            
+            document.getElementById('errorRate').textContent = data.error_rate + '%';
+            
+            // Update health banner
+            const banner = document.getElementById('healthBanner');
+            const message = document.getElementById('healthMessage');
+            
+            if (data.database_connected) {
+                banner.className = 'alert alert-success';
+                message.innerHTML = `<i class="fas fa-check-circle me-2"></i>System healthy • ${data.sessions_24h} sessions in last 24h • Database connected`;
+            } else {
+                banner.className = 'alert alert-danger';
+                message.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Database connection issue • Some features may be limited`;
+            }
+            banner.classList.remove('d-none');
+        }
+
+        function updateTimestamp() {
+            document.getElementById('updateTime').textContent = new Date().toLocaleTimeString();
+        }
+
+        function showRefreshIndicator(show) {
+            document.getElementById('refreshIndicator').style.display = show ? 'block' : 'none';
+        }
+
+        function rotateRefreshIcon(rotate) {
+            const icon = document.getElementById('refreshIcon');
+            if (rotate) {
+                icon.classList.add('fa-spin');
+            } else {
+                icon.classList.remove('fa-spin');
+            }
+        }
+
+        function showError(message) {
+            const banner = document.getElementById('healthBanner');
+            const messageEl = document.getElementById('healthMessage');
+            
+            banner.className = 'alert alert-danger';
+            messageEl.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${message}`;
+            banner.classList.remove('d-none');
+        }
+    </script>
+</body>
+</html>

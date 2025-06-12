@@ -1,0 +1,40 @@
+# Core LangGraph and LangChain
+langgraph
+langchain-openai
+langchain-core
+
+# Google APIs
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+google-auth
+
+# Database and Vector Store
+astrapy
+numpy
+
+# Web and API
+requests
+fastapi
+uvicorn
+pydantic
+
+# Security and Authentication
+PyJWT
+python-multipart
+
+# Utilities
+python-dotenv
+
+# OpenAI
+openai
+
+# Database and Analytics
+psycopg2-binary
+pandas
+plotly
+jinja2
+
+# Additional Security Dependencies
+cryptography
+bcrypt

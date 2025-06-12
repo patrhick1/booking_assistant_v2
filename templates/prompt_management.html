@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Management - BookingAssistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            border-left: 4px solid #007bff;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: #0056b3;
+        }
+
+        .nav-btn.secondary {
+            background: #6c757d;
+        }
+
+        .nav-btn.secondary:hover {
+            background: #545b62;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .label {
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .prompts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .prompt-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .prompt-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .prompt-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .prompt-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .prompt-category {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .prompt-description {
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .prompt-body {
+            padding: 20px;
+        }
+
+        .version-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .version-badge {
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .usage-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .prompt-content {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 3px solid #007bff;
+            margin-bottom: 15px;
+            max-height: 120px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .prompt-content::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: linear-gradient(transparent, #f8f9fa);
+        }
+
+        .prompt-content pre {
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #495057;
+            margin: 0;
+        }
+
+        .prompt-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            color: #2c3e50;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+
+        textarea.form-control {
+            min-height: 200px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Prompt Management</h1>
+            <p>Create, edit, and manage prompt versions for your BookingAssistant. Each prompt category controls different aspects of email processing.</p>
+            <div class="nav-buttons">
+                <a href="/dashboard" class="nav-btn secondary">← Back to Dashboard</a>
+                <button onclick="showCreateModal()" class="nav-btn">+ Create New Version</button>
+                <button onclick="refreshPrompts()" class="nav-btn secondary">🔄 Refresh</button>
+                <a href="/docs" class="nav-btn secondary">📚 API Docs</a>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Prompts</h3>
+                <div class="number" id="totalPrompts">-</div>
+                <div class="label">Active Categories</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Versions</h3>
+                <div class="number" id="totalVersions">-</div>
+                <div class="label">All Time Created</div>
+            </div>
+            <div class="stat-card">
+                <h3>Avg Usage</h3>
+                <div class="number" id="avgUsage">-</div>
+                <div class="label">Per Prompt</div>
+            </div>
+            <div class="stat-card">
+                <h3>Performance</h3>
+                <div class="number" id="avgPerformance">-</div>
+                <div class="label">Avg Score</div>
+            </div>
+        </div>
+
+        <div id="alertContainer"></div>
+        <div id="loadingIndicator" class="loading">
+            <div class="spinner"></div> Loading prompts...
+        </div>
+        <div id="promptsContainer" class="prompts-grid" style="display: none;"></div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div id="promptModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Create New Prompt Version</h2>
+            </div>
+            <form id="promptForm">
+                <div class="form-group">
+                    <label class="form-label" for="promptName">Prompt Category</label>
+                    <select id="promptName" class="form-control" required>
+                        <option value="">Select a category...</option>
+                        <option value="classification_fewshot">Classification (Email categorization)</option>
+                        <option value="draft_generation_prompt">Draft Generation (Main email creation)</option>
+                        <option value="slack_notification_prompt">Slack Notification (Alert messages)</option>
+                        <option value="query_for_relevant_email_prompt">Query Generation (Vector search)</option>
+                        <option value="rejection_strategy_prompt">Rejection Strategy (Analysis)</option>
+                        <option value="soft_rejection_drafting_prompt">Soft Rejection (Polite declines)</option>
+                        <option value="draft_editing_prompt">Draft Editing (Content refinement)</option>
+                        <option value="continuation_decision_prompt">Continuation Decision (Process control)</option>
+                        <option value="client_gdrive_extract_prompt">Document Extraction (Client data)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="description">Version Description</label>
+                    <input type="text" id="description" class="form-control" placeholder="e.g., Improved classification accuracy for rejection emails" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="content">Prompt Content</label>
+                    <textarea id="content" class="form-control" placeholder="Enter your prompt content here..." required></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span id="submitText">Create Version</span>
+                        <span id="submitSpinner" class="spinner" style="display: none;"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentPrompts = [];
+        let authToken = localStorage.getItem('token');
+
+        // Check authentication
+        if (!authToken) {
+            window.location.href = '/login';
+        }
+
+        // Load prompts on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPrompts();
+        });
+
+        async function loadPrompts() {
+            try {
+                document.getElementById('loadingIndicator').style.display = 'block';
+                document.getElementById('promptsContainer').style.display = 'none';
+
+                const response = await fetch('/api/prompts', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                currentPrompts = data.prompts || [];
+                
+                renderPrompts();
+                updateStats();
+                
+            } catch (error) {
+                console.error('Error loading prompts:', error);
+                showAlert('Failed to load prompts: ' + error.message, 'error');
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('promptsContainer').style.display = 'grid';
+            }
+        }
+
+        function renderPrompts() {
+            const container = document.getElementById('promptsContainer');
+            
+            if (currentPrompts.length === 0) {
+                container.innerHTML = '<div class="loading">No prompts found</div>';
+                return;
+            }
+
+            container.innerHTML = currentPrompts.map(prompt => `
+                <div class="prompt-card">
+                    <div class="prompt-header">
+                        <div class="prompt-title">${formatPromptName(prompt.prompt_name)}</div>
+                        <div class="prompt-category">${prompt.category}</div>
+                        <div class="prompt-description">${prompt.description || 'No description'}</div>
+                    </div>
+                    <div class="prompt-body">
+                        <div class="version-info">
+                            <span class="version-badge">v${prompt.active_version || 1}</span>
+                            <div class="usage-stats">
+                                <span>📊 ${prompt.usage_count || 0} uses</span>
+                                <span>⭐ ${(prompt.performance_score || 0).toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="prompt-content">
+                            <pre>${truncateContent(getPromptPreview(prompt), 200)}</pre>
+                        </div>
+                        <div class="prompt-actions">
+                            <button onclick="editPrompt('${prompt.prompt_name}')" class="btn btn-primary">✏️ New Version</button>
+                            <button onclick="viewVersions('${prompt.prompt_name}')" class="btn btn-secondary">📋 Versions</button>
+                            <button onclick="viewFullContent('${prompt.prompt_name}')" class="btn btn-secondary">👁️ View Full</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats() {
+            const totalPrompts = currentPrompts.length;
+            const totalVersions = currentPrompts.reduce((sum, p) => sum + (p.active_version || 1), 0);
+            const avgUsage = totalPrompts > 0 ? (currentPrompts.reduce((sum, p) => sum + (p.usage_count || 0), 0) / totalPrompts).toFixed(0) : 0;
+            const avgPerformance = totalPrompts > 0 ? (currentPrompts.reduce((sum, p) => sum + (p.performance_score || 0), 0) / totalPrompts).toFixed(2) : 0;
+
+            document.getElementById('totalPrompts').textContent = totalPrompts;
+            document.getElementById('totalVersions').textContent = totalVersions;
+            document.getElementById('avgUsage').textContent = avgUsage;
+            document.getElementById('avgPerformance').textContent = avgPerformance;
+        }
+
+        function formatPromptName(name) {
+            return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function getPromptPreview(prompt) {
+            // This would need to be enhanced to show actual content
+            return `Prompt content for ${prompt.prompt_name}...\n\nCategory: ${prompt.category}\nDescription: ${prompt.description}`;
+        }
+
+        function truncateContent(content, maxLength) {
+            if (content.length <= maxLength) return content;
+            return content.substring(0, maxLength) + '...';
+        }
+
+        function showCreateModal() {
+            document.getElementById('modalTitle').textContent = 'Create New Prompt Version';
+            document.getElementById('promptForm').reset();
+            document.getElementById('promptModal').style.display = 'block';
+        }
+
+        function editPrompt(promptName) {
+            document.getElementById('modalTitle').textContent = 'Create New Version';
+            document.getElementById('promptName').value = promptName;
+            document.getElementById('promptName').disabled = true;
+            document.getElementById('promptModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('promptModal').style.display = 'none';
+            document.getElementById('promptName').disabled = false;
+        }
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const submitBtn = document.querySelector('#promptForm button[type="submit"]');
+            const submitText = document.getElementById('submitText');
+            const submitSpinner = document.getElementById('submitSpinner');
+            
+            try {
+                submitBtn.disabled = true;
+                submitText.style.display = 'none';
+                submitSpinner.style.display = 'inline-block';
+
+                const formData = {
+                    content: document.getElementById('content').value,
+                    description: document.getElementById('description').value
+                };
+
+                const promptName = document.getElementById('promptName').value;
+                
+                const response = await fetch(`/api/prompts/${promptName}/versions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                showAlert(`New version created successfully for ${formatPromptName(promptName)}!`, 'success');
+                closeModal();
+                loadPrompts(); // Refresh the list
+                
+            } catch (error) {
+                console.error('Error creating prompt version:', error);
+                showAlert('Failed to create prompt version: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitText.style.display = 'inline';
+                submitSpinner.style.display = 'none';
+            }
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alertClass = type === 'error' ? 'alert-error' : 'alert-success';
+            
+            container.innerHTML = `
+                <div class="alert ${alertClass}">
+                    ${message}
+                </div>
+            `;
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function refreshPrompts() {
+            loadPrompts();
+        }
+
+        async function viewVersions(promptName) {
+            try {
+                const response = await fetch(`/api/prompts/${promptName}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Show versions in a simple alert for now
+                const versions = data.versions || [];
+                let versionText = `Versions for ${formatPromptName(promptName)}:\n\n`;
+                versions.forEach(v => {
+                    versionText += `v${v.version} - ${v.description} ${v.is_active ? '(ACTIVE)' : ''}\n`;
+                });
+                
+                alert(versionText);
+                
+            } catch (error) {
+                showAlert('Failed to load versions: ' + error.message, 'error');
+            }
+        }
+
+        async function viewFullContent(promptName) {
+            try {
+                const response = await fetch(`/api/prompts/${promptName}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Show content in a simple alert for now
+                const content = data.active_content || 'No content available';
+                alert(`Active content for ${formatPromptName(promptName)}:\n\n${content.substring(0, 1000)}${content.length > 1000 ? '...' : ''}`);
+                
+            } catch (error) {
+                showAlert('Failed to load content: ' + error.message, 'error');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('promptForm').addEventListener('submit', handleFormSubmit);
+
+        // Close modal when clicking outside
+        document.getElementById('promptModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
