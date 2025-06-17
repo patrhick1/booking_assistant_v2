@@ -228,9 +228,14 @@ async def handle_slack_interactions(request: Request):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/slack/events")
+@app.get("/slack/events")
 async def handle_slack_events(request: Request):
-    """Handle Slack Events API (for future features like message editing)"""
+    """Handle Slack Events API"""
     try:
+        if request.method == "GET":
+            # Slack sometimes sends GET requests for verification
+            return {"status": "ok", "message": "Slack events endpoint is ready"}
+        
         data = await request.json()
         
         # Handle URL verification challenge
@@ -249,7 +254,7 @@ async def handle_slack_events(request: Request):
         
     except Exception as e:
         print(f"Error handling Slack event: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        return {"error": str(e)}
 
 # ==========================================
 # EMAIL PROCESSING ENDPOINTS
