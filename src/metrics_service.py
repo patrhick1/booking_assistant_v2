@@ -8,7 +8,7 @@ import hashlib
 import time
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 from dotenv import load_dotenv
@@ -150,13 +150,17 @@ class MetricsCollector:
         duration_ms = int((time.time() - self.node_timers[node_name]) * 1000)
         del self.node_timers[node_name]
         
+        # Calculate timestamps
+        completed_at = datetime.now(timezone.utc)
+        started_at = completed_at - timedelta(milliseconds=duration_ms)
+        
         query = """
             INSERT INTO node_executions 
-            (session_id, node_name, duration_ms, success, error_message, input_data, output_data)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            (session_id, node_name, started_at, completed_at, duration_ms, success, error_message, input_data, output_data)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         params = (
-            self.current_session.session_id, node_name, duration_ms, 
+            self.current_session.session_id, node_name, started_at, completed_at, duration_ms, 
             success, error, 
             json.dumps(input_data) if input_data else None,
             json.dumps(output_data) if output_data else None

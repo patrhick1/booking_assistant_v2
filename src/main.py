@@ -17,6 +17,7 @@ from src.gmail_service import GmailApiService
 from src.metrics_service import metrics
 from src.prompt_manager import prompt_manager
 from src.utils import send_interactive_message
+from src.prompts import continuation_decision_prompt
 from langgraph.checkpoint.memory import MemorySaver
 
 # --- Initialization ---

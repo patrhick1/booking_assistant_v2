@@ -278,16 +278,26 @@ class PromptManager:
             conn = self.db_pool.getconn()
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    SELECT content FROM prompt_versions 
+                    SELECT content, id FROM prompt_versions 
                     WHERE prompt_name = %s AND is_active = TRUE
                     ORDER BY version DESC LIMIT 1
                 """, (prompt_name,))
                 
                 result = cursor.fetchone()
                 if result:
-                    # Track usage
-                    self._track_prompt_usage(prompt_name, cursor.lastrowid)
-                    return result[0]
+                    # Handle RealDictRow format
+                    if hasattr(result, 'items'):  # RealDictRow
+                        content = result['content']
+                        version_id = result['id']
+                    else:  # Regular tuple
+                        content = result[0]
+                        version_id = result[1]
+                    
+                    # Track usage if we have a valid version ID
+                    if version_id and content:
+                        self._track_prompt_usage(prompt_name, version_id)
+                        print(f"✅ Retrieved prompt {prompt_name} from database (length: {len(content)})")
+                        return content
                 
             self.db_pool.putconn(conn)
             
@@ -301,8 +311,15 @@ class PromptManager:
         """Fallback to original prompts.py if database unavailable"""
         try:
             from src import prompts
-            return getattr(prompts, prompt_name, None)
-        except:
+            prompt_content = getattr(prompts, prompt_name, None)
+            if prompt_content:
+                print(f"✅ Using fallback prompt for {prompt_name}")
+                return prompt_content
+            else:
+                print(f"⚠️  Prompt {prompt_name} not found in prompts.py")
+                return None
+        except Exception as e:
+            print(f"❌ Error importing prompts.py: {e}")
             return None
     
     def _track_prompt_usage(self, prompt_name: str, version_id: str, 

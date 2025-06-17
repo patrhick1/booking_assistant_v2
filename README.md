@@ -114,7 +114,7 @@ TESTING_MODE=false
 pip install -r requirements.txt
 
 # Setup Neon PostgreSQL database
-python setup_neon_database.py
+python setup_complete_database.py
 
 # Test database connection
 python test_neon_connection.py
@@ -353,7 +353,7 @@ BookingAssistant/
 ├── slack_interaction_endpoint.py    # Slack button interaction handler
 ├── secure_dashboard_app.py          # Secure dashboard with authentication
 ├── start_slack_endpoint.py          # Slack endpoint startup script
-├── setup_neon_database.py           # Database schema setup
+├── setup_complete_database.py        # Database schema setup
 ├── test_neon_connection.py          # Database connectivity test
 ├── test_phase3_feedback.py          # Feedback integration test
 ├── run_assistant.py                 # Main email processing script
@@ -408,11 +408,11 @@ BookingAssistant/
 
 ---
 
-## 🚀 Replit Deployment
+## 🚀 Replit Deployment - FULLY AUTOMATED
 
-### 🎯 One-Click Deployment
+### 🎯 Zero-Configuration Deployment
 
-BookingAssistant is **production-ready for Replit** with a unified single-port architecture that combines all services.
+BookingAssistant is **production-ready for Replit** with **fully automated email processing** that runs continuously without any manual intervention.
 
 #### Step 1: Fork to Replit
 
@@ -445,7 +445,13 @@ GMAIL_TARGET_EMAIL=aidrian@podcastguestlaunch.com
 # Required: Google Drive
 GDRIVE_CLIENT_ROOT_FOLDER_ID=your_google_drive_folder_id
 
-# Optional: Slack Integration
+# Required: Maildoso IMAP (for backup email source)
+MAILODOSO_IMAP_HOST=imap.maildoso.email
+MAILODOSO_IMAP_PORT=993
+MAILODOSO_USER=podcastguestlaunch@maildoso.email
+MAILODOSO_PASSWORD=your_maildoso_password
+
+# Required: Slack Integration
 SLACK_WEBHOOK_URL=your_slack_webhook_url
 SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
 
@@ -461,32 +467,94 @@ TESTING_MODE=false
 1. Upload your `service-account-key.json` file to the Replit root directory
 2. Ensure the filename matches your `GMAIL_SERVICE_ACCOUNT_FILE` secret
 
-#### Step 4: Start the System (Auto-Setup Included!)
+#### Step 4: Start the FULLY AUTOMATED System
 
 Click **"Run"** in Replit! The system will automatically:
-- ✅ Detect missing database tables
-- ✅ Create complete schema using `psycopg2`
-- ✅ Load essential prompt templates
-- ✅ Start all services
+
+✅ **Auto-Database Setup**: Creates complete schema and loads prompts  
+✅ **Auto-Email Processing**: Starts continuous email monitoring (every 60 seconds)  
+✅ **Auto-Slack Integration**: Sends notifications for human review  
+✅ **Auto-Quality Tracking**: Records metrics and performance data  
+✅ **Auto-Gmail Drafts**: Creates drafts after human approval  
 
 **Expected startup output**:
 ```
-✅ Basic services loaded
-🔧 Auto-creating 9 missing database tables...
-✅ Database auto-setup complete!
-   Created tables: 12
-   Loaded prompts: 3
-✅ Database schema verified/created
-✅ Main processing graph loaded
+================================================================================
+🚀 BOOKING ASSISTANT - FULLY AUTOMATED UNIFIED DEPLOYMENT
+================================================================================
+📧 EMAIL PROCESSING (AUTOMATED):
+   • ✅ Continuous Processing: AUTOMATICALLY ACTIVE
+   • 📝 Manual Trigger: POST https://your-repl-name.replit.app/process_emails
+   • 🔄 Status Check: GET https://your-repl-name.replit.app/email_polling_status
+   • ⏸️  Stop Processing: POST https://your-repl-name.replit.app/stop_email_polling
+
+🎯 FULLY AUTOMATED WORKFLOW:
+   📧 Fetch Emails → 🤖 AI Processing → 📝 Draft Creation → 
+   💬 Slack Notification → 👥 Human Review → 📊 Metrics Tracking
+================================================================================
+🚀 Starting automatic email processing...
+✅ Automatic email processing started - checking every 60 seconds
+📧 Found 5 unread emails to process
+🔄 Processing email from client@example.com: Meeting Request...
+✅ Successfully processed email from client@example.com
+⏰ Next email check in 60 seconds...
 ```
 
-**Manual Setup Option**: If you prefer manual control, run `python replit_db_setup.py` first.
+#### Step 5: Access Your AUTOMATED System
 
-#### Step 5: Access Your System
+**Your system is now FULLY AUTOMATED!** Access the interfaces:
 
-The system automatically starts at:
-- **Dashboard**: `https://your-repl-name--your-username.repl.co/`
-- **API Docs**: `https://your-repl-name--your-username.repl.co/docs`
+- **🏠 Dashboard**: `https://your-repl-name--your-username.repl.co/`
+- **📊 Email Status**: `https://your-repl-name--your-username.repl.co/email_polling_status`
+- **📚 API Docs**: `https://your-repl-name--your-username.repl.co/docs`
+- **🔄 Health Check**: `https://your-repl-name--your-username.repl.co/health`
+
+### 🤖 ZERO-MAINTENANCE OPERATION
+
+Once deployed, your system operates **completely automatically**:
+
+#### ✅ **What Happens Automatically**
+
+1. **📧 Email Monitoring**: Checks Gmail + Maildoso every 60 seconds
+2. **🤖 AI Processing**: Classifies emails and generates responses
+3. **📁 Document Retrieval**: Finds relevant client documents from Google Drive  
+4. **✍️ Draft Creation**: Generates contextual email responses
+5. **💬 Slack Notifications**: Sends interactive messages for human review
+6. **📊 Metrics Tracking**: Records all performance data in database
+7. **🔄 Continuous Loop**: Repeats automatically forever
+
+#### 🎛️ **Management & Control**
+
+**Check Processing Status:**
+```bash
+curl https://your-repl-name--your-username.repl.co/email_polling_status
+```
+
+**Temporarily Stop Processing:**
+```bash
+curl -X POST https://your-repl-name--your-username.repl.co/stop_email_polling
+```
+
+**Restart Processing:**
+```bash
+curl -X POST https://your-repl-name--your-username.repl.co/start_email_polling
+```
+
+**Manual Email Processing:**
+```bash
+curl -X POST https://your-repl-name--your-username.repl.co/process_emails
+```
+
+#### 📊 **Only Manual Task: Prompt Management**
+
+The **only thing you need to manage manually** is editing prompts via the dashboard:
+
+1. Go to your dashboard: `https://your-repl-name--your-username.repl.co/`
+2. Navigate to **Prompt Management** section  
+3. Edit prompts to improve AI responses
+4. System automatically uses updated prompts
+
+**Everything else runs automatically 24/7!**
 
 ### 🔗 Configure Slack Integration
 
@@ -564,21 +632,49 @@ Access the analytics dashboard:
 - **Updates**: Push to GitHub and Replit will auto-sync
 - **Backup**: Export your environment variables regularly
 
-### 🚨 Replit Troubleshooting
+### 🚨 Automated System Troubleshooting
+
+#### Quick Health Checks
+
+**✅ Check if email processing is running:**
+```bash
+curl https://your-repl-name--your-username.repl.co/email_polling_status
+# Expected: {"status": "active", "active": true, "thread_alive": true}
+```
+
+**✅ Check system health:**
+```bash
+curl https://your-repl-name--your-username.repl.co/health
+# Should show all services as "true"
+```
 
 #### Common Issues & Solutions
+
+**❌ "Email processing stopped"**
+```bash
+# Restart email processing
+curl -X POST https://your-repl-name--your-username.repl.co/start_email_polling
+
+# Check logs in Replit console for error details
+```
 
 **❌ "Service won't start"**
 ```bash
 # Check if all required secrets are set
-python -c "import os; required=['PGHOST', 'OPENAI_API_KEY', 'ASTRA_DB_APPLICATION_TOKEN', 'ASTRA_DB_API_ENDPOINT']; missing=[v for v in required if not os.getenv(v)]; print('Missing vars:', missing if missing else 'None - all set!')"
+python -c "import os; required=['PGHOST', 'OPENAI_API_KEY', 'ASTRA_DB_APPLICATION_TOKEN', 'ASTRA_DB_API_ENDPOINT', 'GMAIL_SERVICE_ACCOUNT_FILE', 'SLACK_WEBHOOK_URL']; missing=[v for v in required if not os.getenv(v)]; print('Missing vars:', missing if missing else 'None - all set!')"
 
 # Test database connection
 python test_neon_connection.py
 
-# Run complete database setup
+# Run complete database setup  
 python setup_complete_database.py
 ```
+
+**❌ "No emails being processed"**
+- Check Gmail service account permissions
+- Verify Maildoso IMAP credentials in Secrets
+- Look for "Fetched and filtered X new emails" in console logs
+- Ensure emails exist and meet spam filter criteria
 
 **❌ "Database connection failed"**
 - Verify your Neon PostgreSQL credentials in Secrets
@@ -596,9 +692,10 @@ python setup_complete_database.py
 - Check Google API credentials are enabled
 
 **💡 Performance Optimization**
-- Enable "Always On" for production use
+- Enable "Always On" for production use (recommended for 24/7 operation)
 - Monitor memory usage in Replit console
 - Use connection pooling (automatically enabled)
+- Check processing times in dashboard analytics
 
 ### 📋 Environment Variables Quick Reference
 
@@ -653,7 +750,7 @@ python -c "import os; print('DB Host:', os.getenv('PGHOST'))"
 
 **No Data in Dashboard**
 - Process some emails first with the main assistant
-- Verify database schema with `setup_neon_database.py`
+- Verify database schema with `setup_complete_database.py`
 - Check metrics service connection in startup logs
 
 ### Health Checks
@@ -666,19 +763,35 @@ python -c "import os; print('DB Host:', os.getenv('PGHOST'))"
 
 ## 🎉 Development Status
 
-### ✅ Completed Features
+### ✅ Completed Features - PRODUCTION READY
 
-- **Core Pipeline**: LangGraph workflow with conditional routing
-- **Email Processing**: Gmail/Maildoso integration with service account auth
-- **Document Intelligence**: Google Drive integration with smart client matching
-- **Vector Search**: AstraDB integration for email thread similarity
-- **Draft Generation**: Contextual responses with template adherence
-- **Slack Integration**: Interactive messages with quality feedback
-- **Performance Tracking**: Three-phase monitoring system
-- **Real-Time Dashboard**: Comprehensive analytics and visualization
-- **Human Feedback**: Quality rating and approval workflow
-- **Database Integration**: Neon PostgreSQL with complete schema
-- **Testing Framework**: Comprehensive test suite and validation
+- **✅ FULLY AUTOMATED SYSTEM**: Zero-maintenance operation with continuous email processing
+- **✅ Core Pipeline**: LangGraph workflow with conditional routing
+- **✅ Email Processing**: Gmail/Maildoso integration with service account auth + automated polling
+- **✅ Document Intelligence**: Google Drive integration with smart client matching
+- **✅ Vector Search**: AstraDB integration for email thread similarity
+- **✅ Draft Generation**: Contextual responses with template adherence
+- **✅ Slack Integration**: Interactive messages with quality feedback
+- **✅ Performance Tracking**: Three-phase monitoring system with real-time metrics
+- **✅ Real-Time Dashboard**: Comprehensive analytics and visualization
+- **✅ Human Feedback**: Quality rating and approval workflow
+- **✅ Database Integration**: Neon PostgreSQL with auto-schema setup
+- **✅ Automated Deployment**: One-click Replit deployment with zero configuration
+- **✅ Health Monitoring**: Comprehensive system health checks and status endpoints
+- **✅ Error Recovery**: Automatic retry and error handling mechanisms
+- **✅ Testing Framework**: Comprehensive test suite and validation
+
+### 🚀 **DEPLOYMENT STATUS: PRODUCTION READY**
+
+**The system is now FULLY AUTOMATED and ready for production use:**
+
+✅ **Zero Manual Intervention Required**  
+✅ **24/7 Continuous Operation**  
+✅ **Auto-Recovery from Errors**  
+✅ **Real-Time Performance Monitoring**  
+✅ **Seamless Human-AI Collaboration**  
+✅ **Complete Database Auto-Setup**  
+✅ **Production-Grade Error Handling**  
 
 ### 🔮 Future Enhancements
 
@@ -688,7 +801,24 @@ python -c "import os; print('DB Host:', os.getenv('PGHOST'))"
 - **Custom Workflows**: Configurable processing pipelines for different use cases
 - **API Rate Limiting**: Enhanced production-ready features
 - **Automated Learning**: Feedback-driven prompt optimization
+- **Mobile Dashboard**: Mobile-optimized interface for monitoring
+- **Multi-tenant Support**: Support for multiple organizations
 
 ---
 
-**🚀 Ready for production deployment with full monitoring, analytics, and human oversight capabilities.**
+## 🎯 **SYSTEM IS READY FOR PRODUCTION DEPLOYMENT**
+
+**🚀 The BookingAssistant is now a fully automated, production-ready AI email processing system with comprehensive monitoring, analytics, and human oversight capabilities that operates 24/7 without manual intervention.**
+
+### 📊 **What You Get Out of the Box:**
+
+1. **🤖 Intelligent Email Processing**: AI-powered classification and response generation
+2. **📧 Multi-Source Email Integration**: Gmail + IMAP with automatic polling
+3. **📁 Smart Document Retrieval**: Google Drive integration with context awareness
+4. **💬 Human-in-the-Loop**: Slack integration for quality control and approval
+5. **📊 Real-Time Analytics**: Comprehensive performance dashboard and metrics
+6. **🔄 Continuous Operation**: Fully automated 24/7 processing with error recovery
+7. **🎛️ Easy Management**: Simple prompt editing for AI improvement
+8. **🔧 Production Monitoring**: Health checks, status endpoints, and logging
+
+**Deploy once, run forever! 🚀**

@@ -1,5 +1,26 @@
 """Prompt strings for my-assistant agents."""
 
+# Continuation decision prompt
+continuation_decision_prompt = """
+You are an AI assistant that determines whether an incoming email should be processed by the booking assistant system.
+
+Look at this email and determine if it's worth continuing to process. Only respond with "YES" or "NO".
+
+Respond "YES" if the email:
+- Contains a response to a podcast guest pitch
+- Contains booking-related information
+- Contains feedback about a potential guest appearance
+- Is a meaningful business communication
+
+Respond "NO" if the email:
+- Is spam or promotional content
+- Is an automated notification
+- Contains spam keywords like "delivery status notification"
+- Is clearly irrelevant to podcast booking
+
+Provide only "YES" or "NO" as your response.
+"""
+
 # Few-shot classification prompt
 classification_fewshot = """
 You are a helpful assistant that classifies incoming emails into predefined categories.

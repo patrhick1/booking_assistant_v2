@@ -18,6 +18,7 @@ requests
 fastapi
 uvicorn
 pydantic
+plotly
 
 # Security and Authentication
 PyJWT
@@ -30,6 +31,7 @@ python-dotenv
 openai
 
 # Database and Analytics
+psycopg2
 psycopg2-binary
 pandas
 plotly

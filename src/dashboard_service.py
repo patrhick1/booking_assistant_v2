@@ -41,9 +41,9 @@ class DashboardService:
                 password=os.getenv('PGPASSWORD'),
                 cursor_factory=RealDictCursor
             )
-            print("✅ Dashboard database connection established")
+            print("Dashboard database connection established")
         except Exception as e:
-            print(f"❌ Failed to connect to dashboard database: {e}")
+            print(f"Failed to connect to dashboard database: {e}")
             self.db_pool = None
     
     def _execute_query(self, query: str, params: tuple = None) -> List[Dict]:
