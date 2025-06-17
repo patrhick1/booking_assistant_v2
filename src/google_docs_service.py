@@ -20,20 +20,44 @@ class GoogleDocsService:
     Handles reading document content and listing files in folders.
     """
     def __init__(self):
-        if not SERVICE_ACCOUNT_FILE or not os.path.exists(SERVICE_ACCOUNT_FILE):
-            raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set or file not found.")
+        # Try multiple sources for service account file
+        service_account_file = (
+            os.getenv('GMAIL_SERVICE_ACCOUNT_FILE') or 
+            os.getenv('GOOGLE_APPLICATION_CREDENTIALS') or
+            'service-account-key.json'
+        )
+        
+        if not service_account_file or not os.path.exists(service_account_file):
+            if os.getenv('TESTING_MODE') == 'true':
+                print("⚠️  Google Docs service unavailable in testing mode")
+                self.docs_service = None
+                self.drive_service = None
+                return
+            else:
+                print(f"⚠️  Google service account file not found: {service_account_file}")
+                print("   Google Drive and Docs features will be disabled.")
+                self.docs_service = None
+                self.drive_service = None
+                return
         
         try:
             credentials = service_account.Credentials.from_service_account_file(
-                SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+                service_account_file, scopes=SCOPES)
             self.docs_service = build('docs', 'v1', credentials=credentials)
             self.drive_service = build('drive', 'v3', credentials=credentials)
+            print("✅ Google Docs and Drive services initialized")
         except Exception as e:
-            print(f"Failed to initialize GoogleDocsService: {e}")
-            raise
+            print(f"⚠️  Failed to initialize GoogleDocsService: {e}")
+            print("   Google Drive and Docs features will be disabled.")
+            self.docs_service = None
+            self.drive_service = None
 
     def get_document_content(self, document_id: str) -> str:
         """Reads a Google Doc and returns its text content."""
+        if not self.docs_service:
+            print("⚠️  Google Docs service not available")
+            return "Google Docs service unavailable"
+            
         try:
             doc = self.docs_service.documents().get(documentId=document_id).execute()
             content = doc.get('body', {}).get('content', [])
@@ -60,6 +84,10 @@ class GoogleDocsService:
 
     def get_files_in_folder(self, folder_id: str) -> list:
         """Lists all files and folders within a given Google Drive folder."""
+        if not self.drive_service:
+            print("⚠️  Google Drive service not available")
+            return []
+            
         if not folder_id:
             return []
         try:

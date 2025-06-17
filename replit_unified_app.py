@@ -23,11 +23,34 @@ sys.path.append('src')
 
 load_dotenv()
 
-# Import all services
-from src.dashboard_service import dashboard
-from src.slack_feedback_service import slack_feedback
-from src.metrics_service import metrics
-from src.main import graph
+# Import all services with error handling
+try:
+    from src.dashboard_service import dashboard
+    from src.slack_feedback_service import slack_feedback
+    from src.metrics_service import metrics
+    print("✅ Basic services loaded")
+    
+    # Auto-setup database if needed
+    from src.auto_db_setup import ensure_database_ready
+    if ensure_database_ready(metrics.db_pool):
+        print("✅ Database schema verified/created")
+    else:
+        print("⚠️  Database schema setup had issues")
+        
+except Exception as e:
+    print(f"❌ Error loading basic services: {e}")
+    raise
+
+# Import main graph with better error handling
+try:
+    from src.main import graph
+    print("✅ Main processing graph loaded")
+except Exception as e:
+    print(f"❌ Error loading main graph: {e}")
+    print("    This might be due to missing environment variables.")
+    print("    Please check your Secrets configuration.")
+    # Don't raise here - we'll handle this gracefully
+    graph = None
 
 # Create unified FastAPI app
 app = FastAPI(
@@ -257,6 +280,13 @@ async def start_agent_v2(request: Request):
             "sender_email": sender_email
         }
         
+        # Check if graph is available
+        if graph is None:
+            raise HTTPException(
+                status_code=503, 
+                detail="Email processing service unavailable. Please check environment configuration and run database setup."
+            )
+        
         # Process with LangGraph
         thread = {"configurable": {"thread_id": session_id}}
         result = graph.invoke(state, thread)
@@ -293,10 +323,18 @@ async def health_check():
             "dashboard": bool(dashboard.db_pool),
             "metrics": bool(metrics.db_pool),
             "slack_feedback": bool(slack_feedback.webhook_url),
+            "email_processing": graph is not None,
         },
         "database": {
             "connected": bool(dashboard.db_pool),
             "host": os.getenv('PGHOST', 'not_set')[:20] + "..." if os.getenv('PGHOST') else 'not_set'
+        },
+        "environment": {
+            "openai_configured": bool(os.getenv('OPENAI_API_KEY')),
+            "astra_configured": bool(os.getenv('ASTRA_DB_APPLICATION_TOKEN')),
+            "gmail_configured": bool(os.getenv('GMAIL_SERVICE_ACCOUNT_FILE')),
+            "gdrive_configured": bool(os.getenv('GDRIVE_CLIENT_ROOT_FOLDER_ID')),
+            "slack_configured": bool(os.getenv('SLACK_WEBHOOK_URL')),
         }
     }
     

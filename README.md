@@ -2,6 +2,17 @@
 
 🤖 **Intelligent podcast booking assistant with real-time performance tracking and human feedback integration**
 
+## 📚 Table of Contents
+
+- [🚀 Replit Deployment (Recommended)](#-replit-deployment) - One-click deployment
+- [🎯 Overview](#-overview) - System features and capabilities  
+- [🏗️ Architecture](#-architecture) - Technical design
+- [🚀 Quick Start](#-quick-start) - Local development setup
+- [🔧 Slack App Setup](#-slack-app-setup) - Integration configuration
+- [📊 Performance Dashboard](#-performance-dashboard) - Analytics and monitoring
+- [💬 Slack Integration Features](#-slack-integration-features) - Interactive workflows
+- [🧪 Testing & Development](#-testing--development) - Test suites and validation
+
 ## 🎯 Overview
 
 BookingAssistant is an advanced AI-powered email processing system that automatically classifies incoming emails, extracts relevant client documents, generates contextual draft replies, and provides comprehensive performance analytics. The system features interactive Slack integration for human oversight and real-time quality tracking.
@@ -56,6 +67,8 @@ Query Generation → Vector Retrieval → Document Extraction
 ---
 
 ## 🚀 Quick Start
+
+> **⚡ REPLIT DEPLOYMENT (Recommended)**: For the fastest deployment, jump to the [Replit Deployment Section](#-replit-deployment) below.
 
 ### 1. Environment Setup
 
@@ -395,24 +408,228 @@ BookingAssistant/
 
 ---
 
-## 🚀 Deployment
+## 🚀 Replit Deployment
 
-### Production Environment
+### 🎯 One-Click Deployment
 
-The system is designed for deployment on cloud platforms with the following architecture:
+BookingAssistant is **production-ready for Replit** with a unified single-port architecture that combines all services.
 
-- **Application**: Replit for main processing logic
-- **Database**: Neon PostgreSQL for metrics and analytics
-- **Vector Store**: DataStax Astra DB for email similarity search
-- **Document Storage**: Google Drive with service account access
-- **Monitoring**: Built-in dashboard and Slack integration
+#### Step 1: Fork to Replit
 
-### Scaling Considerations
+1. Go to [replit.com](https://replit.com)
+2. Click **"Create Repl"** → **"Import from GitHub"**
+3. Enter your repository URL: `https://github.com/your-username/BookingAssistant`
+4. Name your Repl: `BookingAssistant`
 
-- **Database Connection Pooling**: Handles concurrent requests efficiently
-- **Async Processing**: Non-blocking email processing pipeline
-- **Modular Architecture**: Easy to scale individual components
-- **Performance Monitoring**: Built-in metrics for optimization guidance
+#### Step 2: Configure Environment Variables
+
+In your Replit **Secrets** tab (🔒), add these variables:
+
+```bash
+# Required: Database
+PGDATABASE=neondb
+PGUSER=neondb_owner  
+PGPASSWORD=your_neon_password
+PGHOST=your-neon-host.aws.neon.tech
+PGPORT=5432
+
+# Required: AI Processing
+OPENAI_API_KEY=your_openai_api_key
+ASTRA_DB_APPLICATION_TOKEN=your_astra_token
+ASTRA_DB_API_ENDPOINT=your_astra_endpoint
+
+# Required: Gmail Integration
+GMAIL_SERVICE_ACCOUNT_FILE=service-account-key.json
+GMAIL_TARGET_EMAIL=aidrian@podcastguestlaunch.com
+
+# Required: Google Drive
+GDRIVE_CLIENT_ROOT_FOLDER_ID=your_google_drive_folder_id
+
+# Optional: Slack Integration
+SLACK_WEBHOOK_URL=your_slack_webhook_url
+SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
+
+# Optional: CRM Integration
+ATTIO_API_KEY=your_attio_api_key
+
+# Production Settings
+TESTING_MODE=false
+```
+
+#### Step 3: Upload Service Account Key
+
+1. Upload your `service-account-key.json` file to the Replit root directory
+2. Ensure the filename matches your `GMAIL_SERVICE_ACCOUNT_FILE` secret
+
+#### Step 4: Start the System (Auto-Setup Included!)
+
+Click **"Run"** in Replit! The system will automatically:
+- ✅ Detect missing database tables
+- ✅ Create complete schema using `psycopg2`
+- ✅ Load essential prompt templates
+- ✅ Start all services
+
+**Expected startup output**:
+```
+✅ Basic services loaded
+🔧 Auto-creating 9 missing database tables...
+✅ Database auto-setup complete!
+   Created tables: 12
+   Loaded prompts: 3
+✅ Database schema verified/created
+✅ Main processing graph loaded
+```
+
+**Manual Setup Option**: If you prefer manual control, run `python replit_db_setup.py` first.
+
+#### Step 5: Access Your System
+
+The system automatically starts at:
+- **Dashboard**: `https://your-repl-name--your-username.repl.co/`
+- **API Docs**: `https://your-repl-name--your-username.repl.co/docs`
+
+### 🔗 Configure Slack Integration
+
+Update your Slack App settings with your Replit URLs:
+
+1. **Interactive Components**: `https://your-repl-name--your-username.repl.co/slack/interactions`
+2. **Event Subscriptions**: `https://your-repl-name--your-username.repl.co/slack/events`
+3. **Webhook URL**: Use your Slack webhook URL in secrets
+
+### 📊 Replit Service Architecture
+
+```
+https://your-repl-name--your-username.repl.co/
+├── /                          # Dashboard homepage  
+├── /dashboard                 # Analytics dashboard
+├── /api/*                     # Analytics APIs
+├── /slack/interactions        # Slack button handling
+├── /start_agent_v2           # Email processing endpoint
+├── /health                   # System health check
+└── /docs                     # API documentation
+```
+
+### ⚡ Production Features
+
+- **Always-On**: Upgrade to Hacker plan ($7/month) for 24/7 operation
+- **Auto-Scaling**: Handles traffic spikes automatically  
+- **Monitoring**: Built-in health checks and performance tracking
+- **Security**: Environment-based secrets management
+
+### 🧪 Test Your Deployment
+
+Once your Replit is running, test the system:
+
+#### 1. Health Check
+Visit: `https://your-repl-name--your-username.repl.co/health`
+
+Expected response:
+```json
+{
+  "status": "healthy",
+  "services": {
+    "dashboard": true,
+    "metrics": true,
+    "slack_feedback": true
+  },
+  "database": {
+    "connected": true
+  }
+}
+```
+
+#### 2. Process Test Email
+
+Send a test email via the API:
+```bash
+curl -X POST "https://your-repl-name--your-username.repl.co/start_agent_v2" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "Hi! We are interested in having our CEO as a guest on your podcast. Could you send us more info about the process?",
+    "subject": "Podcast Guest Request",
+    "sender_name": "Jane Smith",
+    "sender_email": "jane.smith@techstartup.com"
+  }'
+```
+
+#### 3. View Dashboard
+
+Access the analytics dashboard:
+`https://your-repl-name--your-username.repl.co/dashboard`
+
+### 🔧 Replit-Specific Tips
+
+- **Keep Alive**: Visit your URL periodically or upgrade to Hacker plan
+- **Logs**: Check console output in Replit for debugging
+- **Updates**: Push to GitHub and Replit will auto-sync
+- **Backup**: Export your environment variables regularly
+
+### 🚨 Replit Troubleshooting
+
+#### Common Issues & Solutions
+
+**❌ "Service won't start"**
+```bash
+# Check if all required secrets are set
+python -c "import os; required=['PGHOST', 'OPENAI_API_KEY', 'ASTRA_DB_APPLICATION_TOKEN', 'ASTRA_DB_API_ENDPOINT']; missing=[v for v in required if not os.getenv(v)]; print('Missing vars:', missing if missing else 'None - all set!')"
+
+# Test database connection
+python test_neon_connection.py
+
+# Run complete database setup
+python setup_complete_database.py
+```
+
+**❌ "Database connection failed"**
+- Verify your Neon PostgreSQL credentials in Secrets
+- Check that your Neon database is not paused/sleeping
+- Run database setup: `python setup_complete_database.py`
+
+**❌ "Slack interactions not working"**
+- Update Slack app URLs to your Replit domain
+- Verify `SLACK_WEBHOOK_URL` in Secrets
+- Test with: `curl https://your-repl.repl.co/health`
+
+**❌ "Gmail integration failing"**
+- Ensure `service-account-key.json` is uploaded to root directory
+- Verify the filename matches `GMAIL_SERVICE_ACCOUNT_FILE` secret
+- Check Google API credentials are enabled
+
+**💡 Performance Optimization**
+- Enable "Always On" for production use
+- Monitor memory usage in Replit console
+- Use connection pooling (automatically enabled)
+
+### 📋 Environment Variables Quick Reference
+
+For a complete environment template, see [`.env.replit.example`](.env.replit.example)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PGHOST` | ✅ | Neon PostgreSQL host |
+| `PGDATABASE` | ✅ | Database name (usually "neondb") |
+| `PGUSER` | ✅ | Database username |
+| `PGPASSWORD` | ✅ | Database password |
+| `OPENAI_API_KEY` | ✅ | OpenAI API key for LLM processing |
+| `ASTRA_DB_APPLICATION_TOKEN` | ✅ | AstraDB token for vector search |
+| `ASTRA_DB_API_ENDPOINT` | ✅ | AstraDB endpoint URL |
+| `ASTRA_DB_KEYSPACE` | ⚪ | AstraDB keyspace (default: "default_keyspace") |
+| `ASTRA_DB_COLLECTION` | ⚪ | AstraDB collection (default: "email_threads") |
+| `GMAIL_SERVICE_ACCOUNT_FILE` | ✅ | Path to Gmail service account JSON |
+| `GMAIL_TARGET_EMAIL` | ✅ | Target Gmail address |
+| `GDRIVE_CLIENT_ROOT_FOLDER_ID` | ✅ | Google Drive root folder ID |
+| `SLACK_WEBHOOK_URL` | ⚪ | Slack webhook for notifications |
+| `SLACK_BOT_TOKEN` | ⚪ | Slack bot token |
+| `ATTIO_API_KEY` | ⚪ | Attio CRM integration |
+| `TESTING_MODE` | ⚪ | Set to "false" for production |
+
+---
+
+## 🚀 Alternative Deployment
+
+### Local Development
+
+For local development or custom hosting:
 
 ---
 

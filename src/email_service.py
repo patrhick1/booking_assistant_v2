@@ -27,20 +27,36 @@ class EmailService:
 
     def _get_gmail_service(self):
         """Initialize Gmail service using service account credentials."""
-        if not os.path.exists(SERVICE_ACCOUNT_FILE):
-            raise ValueError(f"Service account file not found: {SERVICE_ACCOUNT_FILE}")
+        # Check for environment variable first
+        service_account_file = os.getenv('GMAIL_SERVICE_ACCOUNT_FILE', SERVICE_ACCOUNT_FILE)
         
-        # Create credentials from service account file
-        credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=GMAIL_SCOPES)
+        # Check if file exists or if we're in testing mode
+        if not os.path.exists(service_account_file):
+            if os.getenv('TESTING_MODE') == 'true':
+                print("⚠️  Gmail service unavailable in testing mode")
+                return None
+            else:
+                print(f"⚠️  Service account file not found: {service_account_file}")
+                print("   Gmail features will be disabled. Upload service-account-key.json to enable.")
+                return None
         
-        # For domain-wide delegation, you need to specify the user email to impersonate
-        # Get the target email from environment variable
-        target_email = os.getenv('GMAIL_TARGET_EMAIL')
-        if target_email:
-            credentials = credentials.with_subject(target_email)
-        
-        return build('gmail', 'v1', credentials=credentials)
+        try:
+            # Create credentials from service account file
+            credentials = service_account.Credentials.from_service_account_file(
+                service_account_file, scopes=GMAIL_SCOPES)
+            
+            # For domain-wide delegation, you need to specify the user email to impersonate
+            # Get the target email from environment variable
+            target_email = os.getenv('GMAIL_TARGET_EMAIL')
+            if target_email:
+                credentials = credentials.with_subject(target_email)
+            
+            return build('gmail', 'v1', credentials=credentials)
+            
+        except Exception as e:
+            print(f"⚠️  Gmail service initialization failed: {e}")
+            print("   Gmail features will be disabled.")
+            return None
 
     def _should_process_email(self, subject, body, sender_email):
         """Replicates the 'Alive Blockers' filter from Make.com."""
@@ -68,7 +84,11 @@ class EmailService:
         return text.replace(' ', ' ').replace('\t', ' ').replace('\r', '\n')
 
     def fetch_unread_gmail_emails(self):
-        # (This function remains the same, but we'll add the filter and cleaning)
+        # Check if Gmail service is available
+        if not self.gmail_service:
+            print("⚠️  Gmail service not available - skipping Gmail email fetch")
+            return []
+            
         print("Fetching unread emails from Gmail...")
         results = self.gmail_service.users().messages().list(userId='me', labelIds=['INBOX'], q='is:unread').execute()
         messages = results.get('messages', [])

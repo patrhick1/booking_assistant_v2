@@ -10,19 +10,21 @@ from .utils import generate_embedding, decode_embedding
 class AstraDBService:
 
     def __init__(self):
-        token = os.getenv("ASTRA_DB_TOKEN")
+        # Support both variable naming conventions
+        token = os.getenv("ASTRA_DB_APPLICATION_TOKEN") or os.getenv("ASTRA_DB_TOKEN")
         if not token:
-            raise ValueError("ASTRA_DB_TOKEN is not set")
-        endpoint = os.getenv("ASTRA_DB_ENDPOINT")
+            raise ValueError("ASTRA_DB_APPLICATION_TOKEN (or ASTRA_DB_TOKEN) is not set")
+        
+        endpoint = os.getenv("ASTRA_DB_API_ENDPOINT") or os.getenv("ASTRA_DB_ENDPOINT")
         if not endpoint:
-            raise ValueError("ASTRA_DB_ENDPOINT is not set")
-        keyspace = os.getenv("ASTRA_DB_KEYSPACE")
+            raise ValueError("ASTRA_DB_API_ENDPOINT (or ASTRA_DB_ENDPOINT) is not set")
+        
+        keyspace = os.getenv("ASTRA_DB_KEYSPACE", "default_keyspace")  # Provide default
         client = DataAPIClient(token)
         self.db = client.get_database_by_api_endpoint(endpoint,
                                                       keyspace=keyspace)
-        collection_name = os.getenv("ASTRA_DB_COLLECTION")
-        if not collection_name:
-            raise ValueError("ASTRA_DB_COLLECTION is not set")
+        
+        collection_name = os.getenv("ASTRA_DB_COLLECTION", "email_threads")  # Provide default
         self.collection = self.db.get_collection(collection_name)
 
     def fetch_threads(self, query: str, top_k: int = 2) -> List[str]:

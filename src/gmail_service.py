@@ -7,6 +7,11 @@ class GmailApiService(EmailService):
 
     def create_draft(self, to: str, subject: str, body: str):
         """Creates a draft email in the user's Gmail account."""
+        # Check if Gmail service is available
+        if not self.gmail_service:
+            print("⚠️  Gmail service not available - draft creation skipped")
+            return "Gmail service unavailable - draft not created"
+            
         try:
             message = MIMEText(body)
             message['to'] = to
