@@ -36,7 +36,6 @@ python-dotenv
 openai
 
 # Database and Analytics
-psycopg2
 psycopg2-binary
 pandas
 plotly
