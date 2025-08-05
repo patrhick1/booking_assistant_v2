@@ -7,6 +7,9 @@ Handles button clicks and user interactions from enhanced Slack messages
 import os
 import json
 import sys
+import hmac
+import hashlib
+import time
 from urllib.parse import parse_qs
 from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.responses import JSONResponse
@@ -22,10 +25,39 @@ load_dotenv()
 
 app = FastAPI(title="BookingAssistant Slack Interactions", version="1.0.0")
 
+def verify_slack_signature(signing_secret: str, timestamp: str, body: bytes, signature: str) -> bool:
+    """Verify Slack request signature"""
+    if abs(time.time() - int(timestamp)) > 60 * 5:  # 5 minutes
+        return False
+    
+    sig_basestring = f"v0:{timestamp}:{body.decode('utf-8')}"
+    expected_signature = "v0=" + hmac.new(
+        signing_secret.encode(),
+        sig_basestring.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    
+    return hmac.compare_digest(expected_signature, signature)
+
 @app.post("/slack/interactions")
 async def handle_slack_interactions(request: Request):
     """Handle Slack interactive component interactions"""
     try:
+        # Get raw body for signature verification
+        body = await request.body()
+        
+        # Verify Slack signature
+        signing_secret = os.getenv("SLACK_SIGNING_SECRET")
+        if signing_secret:
+            timestamp = request.headers.get("X-Slack-Request-Timestamp")
+            signature = request.headers.get("X-Slack-Signature")
+            
+            if not timestamp or not signature:
+                raise HTTPException(status_code=401, detail="Missing Slack headers")
+            
+            if not verify_slack_signature(signing_secret, timestamp, body, signature):
+                raise HTTPException(status_code=403, detail="Invalid Slack signature")
+        
         # Parse the form data from Slack
         form_data = await request.form()
         payload_str = form_data.get("payload")
@@ -35,9 +67,6 @@ async def handle_slack_interactions(request: Request):
         
         # Parse the JSON payload
         payload = json.loads(payload_str)
-        
-        # Verify the request is from Slack (optional but recommended)
-        # You can add signature verification here for production
         
         # Handle the interaction
         response = slack_feedback.handle_slack_interaction(payload)

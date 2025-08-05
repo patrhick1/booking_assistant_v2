@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # Main application
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Database
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: bookingassistant
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      
+      # Application
+      TESTING_MODE: "false"
+      MARK_EMAILS_AS_READ: "false"
+      
+      # Add your actual API keys here or use .env file
+      NYLAS_API_KEY: ${NYLAS_API_KEY}
+      NYLAS_GRANT_ID: ${NYLAS_GRANT_ID}
+      NYLAS_API_URI: ${NYLAS_API_URI:-https://api.us.nylas.com}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ASTRA_DB_APPLICATION_TOKEN: ${ASTRA_DB_APPLICATION_TOKEN}
+      ASTRA_DB_API_ENDPOINT: ${ASTRA_DB_API_ENDPOINT}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
+      GDRIVE_CLIENT_ROOT_FOLDER_ID: ${GDRIVE_CLIENT_ROOT_FOLDER_ID}
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-admin}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-BookingAssistant2024!}
+      DASHBOARD_SECRET_KEY: ${DASHBOARD_SECRET_KEY:-your-secret-key-here-32-characters}
+      
+    volumes:
+      # Mount service account key if needed
+      - ./src/service-account-key.json:/app/src/service-account-key.json:ro
+      
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: bookingassistant
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema/complete_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Adminer for database management
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

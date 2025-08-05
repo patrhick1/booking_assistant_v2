@@ -59,6 +59,7 @@ class DatabaseService:
         if not self.db_pool:
             return False
         
+        conn = None
         try:
             conn = self.db_pool.getconn()
             with conn.cursor() as cursor:
@@ -80,12 +81,16 @@ class DatabaseService:
                     json.dumps(interaction.payload) if interaction.payload else None
                 ))
                 conn.commit()
-            self.db_pool.putconn(conn)
             return True
             
         except Exception as e:
+            if conn:
+                conn.rollback()
             print(f"❌ Error recording Slack interaction: {e}")
             return False
+        finally:
+            if conn:
+                self.db_pool.putconn(conn)
     
     def record_quality_feedback(self, feedback: QualityFeedback) -> bool:
         """Record quality feedback from Slack interaction"""

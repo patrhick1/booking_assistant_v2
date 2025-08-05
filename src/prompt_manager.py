@@ -105,15 +105,20 @@ class PromptManager:
         CREATE INDEX IF NOT EXISTS idx_ab_test_active ON ab_test_configs(is_active);
         """
         
+        conn = None
         try:
             conn = self.db_pool.getconn()
             with conn.cursor() as cursor:
                 cursor.execute(create_tables_sql)
                 conn.commit()
-            self.db_pool.putconn(conn)
             print("✅ Prompt management tables created/verified")
         except Exception as e:
+            if conn:
+                conn.rollback()
             print(f"❌ Error creating prompt tables: {e}")
+        finally:
+            if conn:
+                self.db_pool.putconn(conn)
     
     def _load_default_prompts(self):
         """Load default prompts from prompts.py into database"""
@@ -210,6 +215,7 @@ class PromptManager:
         if not self.db_pool:
             return "no_db"
         
+        conn = None
         try:
             conn = self.db_pool.getconn()
             with conn.cursor() as cursor:
@@ -257,16 +263,20 @@ class PromptManager:
                     """, (version_id, prompt_name, 1, content, "Initial version", "system", True))
                 
                 conn.commit()
-            self.db_pool.putconn(conn)
             return "created"
             
         except Exception as e:
+            if conn:
+                conn.rollback()
             if "already exists" in str(e) or "duplicate key" in str(e):
                 return "exists"
             else:
                 # Log the actual error for debugging in production
                 print(f"⚠️  Error creating prompt '{prompt_name}': {e}")
                 return "error"
+        finally:
+            if conn:
+                self.db_pool.putconn(conn)
     
     def get_active_prompt(self, prompt_name: str) -> Optional[str]:
         """Get the active version of a prompt"""
@@ -274,6 +284,7 @@ class PromptManager:
             # Fallback to prompts.py if database unavailable
             return self._get_fallback_prompt(prompt_name)
         
+        conn = None
         try:
             conn = self.db_pool.getconn()
             with conn.cursor() as cursor:
@@ -298,11 +309,12 @@ class PromptManager:
                         self._track_prompt_usage(prompt_name, version_id)
                         print(f"✅ Retrieved prompt {prompt_name} from database (length: {len(content)})")
                         return content
-                
-            self.db_pool.putconn(conn)
             
         except Exception as e:
             print(f"Error getting prompt {prompt_name}: {e}")
+        finally:
+            if conn:
+                self.db_pool.putconn(conn)
         
         # Fallback to original prompts.py
         return self._get_fallback_prompt(prompt_name)
@@ -329,6 +341,7 @@ class PromptManager:
         if not self.db_pool or not hasattr(metrics, 'current_session'):
             return
         
+        conn = None
         try:
             session_id = metrics.current_session.session_id if metrics.current_session else None
             if not session_id:
@@ -352,10 +365,14 @@ class PromptManager:
                 """, (version_id,))
                 
                 conn.commit()
-            self.db_pool.putconn(conn)
             
         except Exception as e:
+            if conn:
+                conn.rollback()
             print(f"Error tracking prompt usage: {e}")
+        finally:
+            if conn:
+                self.db_pool.putconn(conn)
     
     def create_prompt_version(self, prompt_name: str, content: str, 
                             description: str, created_by: str) -> str:
@@ -363,6 +380,7 @@ class PromptManager:
         if not self.db_pool:
             raise Exception("Database not available")
         
+        conn = None
         try:
             conn = self.db_pool.getconn()
             with conn.cursor() as cursor:
@@ -382,18 +400,23 @@ class PromptManager:
                 """, (version_id, prompt_name, next_version, content, description, created_by))
                 
                 conn.commit()
-            self.db_pool.putconn(conn)
             
             return version_id
             
         except Exception as e:
+            if conn:
+                conn.rollback()
             raise Exception(f"Error creating prompt version: {e}")
+        finally:
+            if conn:
+                self.db_pool.putconn(conn)
     
     def activate_prompt_version(self, prompt_name: str, version_id: str) -> bool:
         """Activate a specific version of a prompt"""
         if not self.db_pool:
             return False
         
+        conn = None
         try:
             conn = self.db_pool.getconn()
             with conn.cursor() as cursor:
@@ -412,19 +435,24 @@ class PromptManager:
                 """, (version_id, prompt_name))
                 
                 conn.commit()
-            self.db_pool.putconn(conn)
             
             return True
             
         except Exception as e:
+            if conn:
+                conn.rollback()
             print(f"Error activating prompt version: {e}")
             return False
+        finally:
+            if conn:
+                self.db_pool.putconn(conn)
     
     def get_prompt_versions(self, prompt_name: str) -> List[Dict[str, Any]]:
         """Get all versions of a prompt"""
         if not self.db_pool:
             return []
         
+        conn = None
         try:
             conn = self.db_pool.getconn()
             with conn.cursor() as cursor:
@@ -449,18 +477,21 @@ class PromptManager:
                         "usage_count": row["usage_count"]
                     })
                 
-            self.db_pool.putconn(conn)
             return versions
             
         except Exception as e:
             print(f"Error getting prompt versions: {e}")
             return []
+        finally:
+            if conn:
+                self.db_pool.putconn(conn)
     
     def get_all_prompts(self) -> List[Dict[str, Any]]:
         """Get all prompt templates with their active versions"""
         if not self.db_pool:
             return []
         
+        conn = None
         try:
             conn = self.db_pool.getconn()
             with conn.cursor() as cursor:
@@ -486,12 +517,14 @@ class PromptManager:
                         "usage_count": row["usage_count"] or 0
                     })
                 
-            self.db_pool.putconn(conn)
             return prompts
             
         except Exception as e:
             print(f"Error getting all prompts: {e}")
             return []
+        finally:
+            if conn:
+                self.db_pool.putconn(conn)
 
 # Global prompt manager instance
 prompt_manager = PromptManager()

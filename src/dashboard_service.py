@@ -410,27 +410,43 @@ class DashboardService:
     
     def get_session_summary(self, session_id: str) -> Dict[str, Any]:
         """Get comprehensive summary of a processing session"""
-        query = """
-            SELECT 
-                es.*,
-                cr.predicted_label,
-                cr.confidence_score,
-                de.client_matched,
-                de.documents_found,
-                dg.draft_length,
-                dg.context_used,
-                qf.human_action,
-                qf.human_rating,
-                qf.final_quality_score
-            FROM email_sessions es
-            LEFT JOIN classification_results cr ON es.id = cr.session_id
-            LEFT JOIN document_extractions de ON es.id = de.session_id
-            LEFT JOIN draft_generations dg ON es.id = dg.session_id
-            LEFT JOIN quality_feedback qf ON es.id = qf.session_id
-            WHERE es.id = %s
-        """
-        result = self._execute_query(query, (session_id,))
-        return result[0] if result else None
+        if not self.db_pool:
+            return None
+            
+        conn = None
+        try:
+            conn = self.db_pool.getconn()
+            with conn.cursor() as cursor:
+                query = """
+                    SELECT 
+                        es.*,
+                        cr.predicted_label,
+                        cr.confidence_score,
+                        de.client_matched,
+                        de.documents_found,
+                        dg.draft_length,
+                        dg.context_used,
+                        dg.draft_content,
+                        dg.final_draft_content,
+                        qf.human_action,
+                        qf.human_rating,
+                        qf.final_quality_score
+                    FROM email_sessions es
+                    LEFT JOIN classification_results cr ON es.id = cr.session_id
+                    LEFT JOIN document_extractions de ON es.id = de.session_id
+                    LEFT JOIN draft_generations dg ON es.id = dg.session_id
+                    LEFT JOIN quality_feedback qf ON es.id = qf.session_id
+                    WHERE es.id = %s
+                """
+                cursor.execute(query, (session_id,))
+                result = cursor.fetchall()
+                return result[0] if result else None
+        except Exception as e:
+            print(f"Error fetching session summary: {e}")
+            return None
+        finally:
+            if conn:
+                self.db_pool.putconn(conn)
 
 # Global dashboard service instance
 dashboard = DashboardService()

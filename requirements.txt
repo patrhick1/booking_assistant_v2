@@ -3,6 +3,9 @@ langgraph
 langchain-openai
 langchain-core
 
+# Email Services
+nylas
+
 # Google APIs
 google-api-python-client
 google-auth-httplib2
@@ -23,6 +26,8 @@ plotly
 # Security and Authentication
 PyJWT
 python-multipart
+
+slack-sdk>=3.36.0
 
 # Utilities
 python-dotenv

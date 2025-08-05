@@ -39,8 +39,8 @@ class DatabaseManager:
         """Initialize secure connection pool"""
         try:
             self.pool = SimpleConnectionPool(
-                minconn=1,
-                maxconn=20,
+                minconn=2,
+                maxconn=50,  # Increased from 20 to handle concurrent email processing
                 cursor_factory=RealDictCursor,
                 **self.db_config
             )

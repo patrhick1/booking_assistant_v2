@@ -72,26 +72,34 @@ def main_loop():
     """Main loop to poll for new emails and process them."""
     email_service = EmailService()
     polling_interval = 60  # seconds
+    cache_clear_interval = 3600  # Clear cache every hour
+    last_cache_clear = time.time()
+    
+    # Check email marking configuration
+    mark_as_read = os.getenv('MARK_EMAILS_AS_READ', 'false').lower() == 'true'
 
     print("\n" + "="*70)
     print("🚀 STARTING BOOKING & REPLY ASSISTANT - PRODUCTION MODE")
     print("="*70)
-    print("📧 Gmail Account: aidrian@podcastguestlaunch.com")
-    print("📮 Maildoso Account: podcastguestlaunch@maildoso.email")
+    print("📧 Email Service: Nylas API")
     print("🔄 Polling Interval: 60 seconds")
-    print("💬 Slack Notifications: DISABLED")
-    print("📝 Gmail Drafts: ENABLED")
+    print(f"📖 Mark Emails as Read: {'Yes' if mark_as_read else 'No (keeps unread for human review)'}")
+    print(f"💬 Slack Notifications: {'ENABLED' if os.getenv('TESTING_MODE') != 'true' else 'DISABLED (Testing Mode)'}")
+    print("📝 Gmail Drafts: ENABLED via Nylas")
     print("="*70)
     
     while True:
         try:
             print(f"\n🔍 Checking for new emails... (Next check in {polling_interval}s)")
             
-            # Fetch from both sources
-            gmail_emails = email_service.fetch_unread_gmail_emails()
-            maildoso_emails = email_service.fetch_unread_maildoso_emails()
+            # Clear cache periodically to prevent memory growth
+            current_time = time.time()
+            if current_time - last_cache_clear > cache_clear_interval:
+                email_service.clear_processed_cache()
+                last_cache_clear = current_time
             
-            all_new_emails = gmail_emails + maildoso_emails
+            # Fetch emails (Nylas handles all email sources)
+            all_new_emails = email_service.fetch_unread_gmail_emails()
             
             if not all_new_emails:
                 print("No new emails found.")

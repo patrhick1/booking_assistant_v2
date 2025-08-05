@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 import uvicorn
 from fastapi import FastAPI, Request, HTTPException, Form, Query, BackgroundTasks
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,6 +58,17 @@ except Exception as e:
     print("    Please check your Secrets configuration.")
     # Don't raise here - we'll handle this gracefully
     graph = None
+
+# Helper function for safe JSON responses
+def safe_json_response(content: dict, status_code: int = 200) -> Response:
+    """Create a JSON response with proper Content-Length handling"""
+    import json
+    json_content = json.dumps(content, ensure_ascii=False)
+    return Response(
+        content=json_content,
+        status_code=status_code,
+        media_type="application/json"
+    )
 
 # Create unified FastAPI app
 app = FastAPI(
@@ -189,6 +200,106 @@ async def get_session_details(session_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/session/{session_id}", response_class=HTMLResponse)
+async def view_session_details(request: Request, session_id: str):
+    """View detailed session information in HTML"""
+    try:
+        session = dashboard.get_session_summary(session_id)
+        if not session:
+            return HTMLResponse("<h1>Session not found</h1>", status_code=404)
+        
+        # Create a simple HTML view for the session details
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Session Details - {session_id}</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                .draft-content {{
+                    background-color: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                    border: 1px solid #dee2e6;
+                    white-space: pre-wrap;
+                    font-family: monospace;
+                }}
+                .email-content {{
+                    background-color: #e9ecef;
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin-bottom: 20px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container mt-4">
+                <h1>Email Processing Session Details</h1>
+                <p class="text-muted">Session ID: {session_id}</p>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3>Email Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>From:</strong> {session.get('sender_name', 'N/A')} &lt;{session.get('sender_email', 'N/A')}&gt;</p>
+                        <p><strong>Subject:</strong> {session.get('subject', 'N/A')}</p>
+                        <p><strong>Received:</strong> {session.get('created_at', 'N/A')}</p>
+                        <p><strong>Classification:</strong> <span class="badge bg-primary">{session.get('predicted_label', session.get('classification', 'N/A'))}</span></p>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3>Processing Results</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Status:</strong> <span class="badge bg-{('success' if session.get('status') == 'completed' else 'danger')}">{session.get('status', 'N/A')}</span></p>
+                                <p><strong>Processing Time:</strong> {session.get('total_duration_ms', 0) / 1000:.2f} seconds</p>
+                                <p><strong>Client Matched:</strong> {('✓' if session.get('client_matched') else '✗')} {session.get('client_name', '')}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Documents Found:</strong> {session.get('documents_found', 0)}</p>
+                                <p><strong>Context Used:</strong> {('Yes' if session.get('context_used') else 'No')}</p>
+                                <p><strong>Draft Length:</strong> {session.get('draft_length', 0)} characters</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3>Generated Draft</h3>
+                    </div>
+                    <div class="card-body">
+                        {('<div class="draft-content">' + (session.get('final_draft_content') or session.get('draft_content', 'No draft content available')) + '</div>' if session.get('draft_content') or session.get('final_draft_content') else '<p class="text-muted">No draft content available</p>')}
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3>Quality Metrics</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Template Adherence Score:</strong> {(session.get('template_adherence_score', 0) * 100):.1f}%</p>
+                        <p><strong>Human Action:</strong> {session.get('human_action', 'Pending')}</p>
+                        <p><strong>Human Rating:</strong> {session.get('human_rating', 'N/A')}</p>
+                        <p><strong>Final Quality Score:</strong> {session.get('final_quality_score', 'N/A')}</p>
+                    </div>
+                </div>
+                
+                <a href="/" class="btn btn-secondary mb-4">Back to Dashboard</a>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return HTMLResponse(html_content)
+    except Exception as e:
+        return HTMLResponse(f"<h1>Error: {str(e)}</h1>", status_code=500)
+
 @app.get("/api/health")
 async def get_system_health():
     """Get system health indicators"""
@@ -205,26 +316,55 @@ async def get_system_health():
 @app.post("/slack/interactions")
 async def handle_slack_interactions(request: Request):
     """Handle Slack interactive component interactions"""
+    print("\n=== SLACK INTERACTION RECEIVED ===")
     try:
+        # Verify Slack signature
+        timestamp = request.headers.get("X-Slack-Request-Timestamp", "")
+        signature = request.headers.get("X-Slack-Signature", "")
+        body = await request.body()
+        
+        if not slack_feedback.verify_slack_request(body, timestamp, signature):
+            print("❌ Invalid Slack signature")
+            raise HTTPException(status_code=403, detail="Invalid request signature")
+        
         # Parse the form data from Slack
         form_data = await request.form()
         payload_str = form_data.get("payload")
         
         if not payload_str:
+            print("❌ No payload found in request")
             raise HTTPException(status_code=400, detail="No payload found")
         
         # Parse the JSON payload
         payload = json.loads(payload_str)
         
+        # Log interaction details
+        user = payload.get("user", {})
+        actions = payload.get("actions", [])
+        print(f"👤 User: {user.get('name', 'Unknown')} ({user.get('id', 'Unknown ID')})")
+        
+        if actions:
+            action = actions[0]
+            action_id = action.get("action_id")
+            action_value = action.get("value", "{}")
+            print(f"🔘 Action: {action_id}")
+            print(f"📦 Value: {action_value}")
+        
         # Handle the interaction
         response = slack_feedback.handle_slack_interaction(payload)
         
-        return JSONResponse(content=response)
+        print(f"✅ Response: {response}")
+        print("=== END SLACK INTERACTION ===\n")
         
-    except json.JSONDecodeError:
+        return safe_json_response(response)
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON decode error: {e}")
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
     except Exception as e:
-        print(f"Error handling Slack interaction: {e}")
+        print(f"❌ Error handling Slack interaction: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/slack/events")
@@ -236,25 +376,43 @@ async def handle_slack_events(request: Request):
             # Slack sometimes sends GET requests for verification
             return {"status": "ok", "message": "Slack events endpoint is ready"}
         
-        data = await request.json()
+        # Get the raw body for verification
+        body = await request.body()
         
-        # Handle URL verification challenge
+        # Parse JSON
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            print("Failed to parse Slack event JSON")
+            return {"error": "Invalid JSON"}
+        
+        # IMPORTANT: Handle URL verification challenge FIRST
         if data.get("type") == "url_verification":
-            return {"challenge": data.get("challenge")}
+            challenge = data.get("challenge")
+            print(f"Slack URL verification - returning challenge: {challenge}")
+            # Return just the challenge value as Slack expects
+            return {"challenge": challenge}
         
         # Handle actual events
         event = data.get("event", {})
         event_type = event.get("type")
         
+        print(f"Received Slack event type: {event_type}")
+        
         if event_type == "message":
             # Future: Handle message edits for edit distance calculation
             pass
         
-        return {"status": "ok"}
+        # Always return 200 OK for events
+        return {"ok": True}
         
     except Exception as e:
         print(f"Error handling Slack event: {e}")
-        return {"error": str(e)}
+        import traceback
+        traceback.print_exc()
+        # For URL verification, we still need to try to return the challenge
+        # Don't return error for Slack events - always return 200 OK
+        return {"ok": False, "error": str(e)}
 
 # ==========================================
 # EMAIL PROCESSING ENDPOINTS
@@ -341,6 +499,13 @@ async def start_agent_v2(request: Request):
         }
         session_id = metrics.start_email_session(email_details)
         
+        # Skip if email was already processed successfully
+        if session_id is None:
+            return safe_json_response({
+                "status": "skipped",
+                "message": "Email already processed successfully"
+            })
+        
         # Create initial state
         state = {
             "email_text": cleaned_email,
@@ -406,6 +571,10 @@ def continuous_email_processing():
                         
                         # Start metrics session
                         session_id = metrics.start_email_session(email_details)
+                        
+                        # Skip if email was already processed successfully
+                        if session_id is None:
+                            continue
                         
                         # Create initial state for LangGraph
                         state = {
@@ -622,6 +791,10 @@ def process_emails_internal():
             # Start metrics session
             session_id = metrics.start_email_session(email_details)
             
+            # Skip if email was already processed successfully
+            if session_id is None:
+                continue
+            
             # Create initial state for LangGraph
             state = {
                 "email_text": email_details["body"],
@@ -664,6 +837,11 @@ def process_emails_internal():
 # HEALTH AND STATUS ENDPOINTS
 # ==========================================
 
+@app.get("/favicon.ico")
+async def favicon():
+    """Return empty favicon to prevent 404 errors"""
+    return Response(content="", status_code=204)
+
 @app.get("/health")
 async def health_check():
     """Comprehensive health check for all services"""
@@ -675,13 +853,13 @@ async def health_check():
             "metrics": bool(metrics.db_pool),
             "slack_feedback": bool(slack_feedback.webhook_url),
             "email_processing": graph is not None,
-            "gmail_service": bool(email_service.gmail_service),
+            "gmail_service": bool(email_service.nylas_client),
             "automatic_email_processing": email_processing_active,
         },
         "email_processing": {
             "automatic_active": email_processing_active,
             "thread_alive": email_processing_thread.is_alive() if email_processing_thread else False,
-            "gmail_available": bool(email_service.gmail_service),
+            "gmail_available": bool(email_service.nylas_client),
             "graph_available": graph is not None
         },
         "database": {
@@ -741,7 +919,7 @@ def start_automatic_email_processing():
     global email_processing_thread, email_processing_active
     
     # Only start if services are available
-    if graph and (email_service.gmail_service or True):  # IMAP might work even if Gmail doesn't
+    if graph and (email_service.nylas_client or True):  # IMAP might work even if Gmail doesn't
         print("🚀 Starting automatic email processing...")
         
         # Start email processing in a separate thread
@@ -776,7 +954,7 @@ def print_startup_info():
     print("✅ All services running on single port for Replit")
     print("✅ Database:", "Connected" if dashboard.db_pool else "Disconnected")
     print("✅ Slack:", "Configured" if os.getenv('SLACK_WEBHOOK_URL') else "Not configured")
-    print("✅ Gmail Service:", "Available" if email_service.gmail_service else "Unavailable")
+    print("✅ Gmail Service:", "Available" if email_service.nylas_client else "Unavailable")
     print("✅ Email Processing:", "Ready" if graph else "Unavailable")
     print("✅ Auto Processing:", "Active" if email_processing_active else "Inactive")
     print("")
@@ -799,5 +977,10 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=port,
         reload=False,  # Disable reload for production
-        log_level="info"
+        log_level="info",
+        # Fix for Content-Length errors
+        http="h11",  # Use h11 HTTP implementation
+        ws="none",  # Disable WebSocket to reduce complexity
+        limit_max_requests=1000,  # Restart workers periodically
+        timeout_keep_alive=5  # Reduce keep-alive to prevent hanging connections
     )

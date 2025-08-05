@@ -25,7 +25,7 @@ BookingAssistant is an advanced AI-powered email processing system that automati
 🎯 **Strategic Rejection Handling** - Special pipeline for challenging rejections  
 💬 **Interactive Slack Integration** - Rich feedback interface with quality ratings  
 📊 **Real-Time Analytics** - Comprehensive performance monitoring dashboard  
-📧 **Gmail Integration** - Automated draft creation with service account auth  
+📧 **Nylas Email Integration** - Unified email API for reading and creating drafts  
 
 ---
 
@@ -85,12 +85,14 @@ PGPORT=5432
 # OpenAI API
 OPENAI_API_KEY=your_openai_api_key
 
-# Gmail API (Service Account)
-GMAIL_SERVICE_ACCOUNT_FILE=path/to/service-account-key.json
-GMAIL_TARGET_EMAIL=aidrian@podcastguestlaunch.com
+# Email Service - Nylas
+NYLAS_API_KEY=your_nylas_api_key
+NYLAS_GRANT_ID=your_nylas_grant_id
+NYLAS_API_URI=https://api.us.nylas.com
 
-# Google Drive
+# Google Drive (for document extraction)
 GDRIVE_CLIENT_ROOT_FOLDER_ID=your_google_drive_folder_id
+GOOGLE_APPLICATION_CREDENTIALS=src/service-account-key.json
 
 # AstraDB Vector Database
 ASTRA_DB_APPLICATION_TOKEN=your_astra_token
@@ -123,21 +125,15 @@ python test_neon_connection.py
 ### 3. Start Services
 
 ```bash
-# Terminal 1 - Performance Dashboard (Port 8001)
-python secure_dashboard_app.py
-
-# Terminal 2 - Slack Interaction Endpoint (Port 8002)
-python start_slack_endpoint.py
-
-# Terminal 3 - Main Email Assistant
-python run_assistant.py
+# Run the unified application
+python replit_unified_app.py
 ```
 
 ### 4. Access Interfaces
 
-- **📊 Performance Dashboard**: http://localhost:8001
-- **🔗 Slack Interactions**: http://localhost:8002
-- **📚 API Documentation**: http://localhost:8001/docs
+- **📊 Performance Dashboard**: http://localhost:8080
+- **🔗 Slack Interactions**: http://localhost:8080/slack/interactions
+- **📚 API Documentation**: http://localhost:8080/docs
 
 ---
 
@@ -153,7 +149,7 @@ python run_assistant.py
 
 1. In your app settings, go to **"Interactive Components"**
 2. Turn on **"Interactivity"**
-3. Set **Request URL** to: `https://your-domain.com:8002/slack/interactions`
+3. Set **Request URL** to: `https://your-domain.com:8080/slack/interactions`
    - For local testing: `https://your-ngrok-url.ngrok.io/slack/interactions`
 4. Click **"Save Changes"**
 
@@ -169,7 +165,7 @@ python run_assistant.py
 
 1. Go to **"Event Subscriptions"**
 2. Turn on **"Enable Events"**
-3. Set **Request URL** to: `https://your-domain.com:8002/slack/events`
+3. Set **Request URL** to: `https://your-domain.com:8080/slack/events`
 4. Subscribe to workspace events:
    - `message.channels` (for future message editing features)
 
@@ -200,8 +196,8 @@ python test_phase3_feedback.py
 If testing locally, use ngrok to expose your endpoints:
 
 ```bash
-# Install ngrok and expose port 8002
-ngrok http 8002
+# Install ngrok and expose port 8080
+ngrok http 8080
 
 # Use the https URL in your Slack app configuration
 # Example: https://abc123.ngrok.io/slack/interactions
@@ -340,20 +336,17 @@ BookingAssistant/
 ├── src/
 │   ├── main.py                      # Core LangGraph pipeline
 │   ├── prompts.py                   # LLM prompt templates
-│   ├── email_service.py             # Email fetching (Gmail/Maildoso)
-│   ├── gmail_service.py             # Gmail-specific operations
+│   ├── email_service.py             # Email fetching (Nylas)
+│   ├── nylas_email_service.py       # Nylas-specific operations
 │   ├── google_docs_service.py       # Google Drive integration
 │   ├── astradb_services.py          # Vector database operations
 │   ├── metrics_service.py           # Performance tracking service
 │   ├── dashboard_service.py         # Analytics backend
-│   ├── slack_feedback_service.py    # Enhanced Slack integration
+│   ├── enhanced_slack_feedback_service.py # Enhanced Slack integration
 │   ├── utils.py                     # Utility functions
 │   └── Test Case/                   # Automated testing suite
-├── dashboard_app.py                 # FastAPI dashboard application
-├── slack_interaction_endpoint.py    # Slack button interaction handler
-├── secure_dashboard_app.py          # Secure dashboard with authentication
-├── start_slack_endpoint.py          # Slack endpoint startup script
-├── setup_complete_database.py        # Database schema setup
+├── replit_unified_app.py            # Unified FastAPI application
+├── setup_complete_database.py       # Database schema setup
 ├── test_neon_connection.py          # Database connectivity test
 ├── test_phase3_feedback.py          # Feedback integration test
 ├── run_assistant.py                 # Main email processing script
@@ -438,18 +431,14 @@ OPENAI_API_KEY=your_openai_api_key
 ASTRA_DB_APPLICATION_TOKEN=your_astra_token
 ASTRA_DB_API_ENDPOINT=your_astra_endpoint
 
-# Required: Gmail Integration
-GMAIL_SERVICE_ACCOUNT_FILE=service-account-key.json
-GMAIL_TARGET_EMAIL=aidrian@podcastguestlaunch.com
+# Required: Email Service - Nylas
+NYLAS_API_KEY=your_nylas_api_key
+NYLAS_GRANT_ID=your_nylas_grant_id
+NYLAS_API_URI=https://api.us.nylas.com
 
 # Required: Google Drive
 GDRIVE_CLIENT_ROOT_FOLDER_ID=your_google_drive_folder_id
-
-# Required: Maildoso IMAP (for backup email source)
-MAILODOSO_IMAP_HOST=imap.maildoso.email
-MAILODOSO_IMAP_PORT=993
-MAILODOSO_USER=podcastguestlaunch@maildoso.email
-MAILODOSO_PASSWORD=your_maildoso_password
+GOOGLE_APPLICATION_CREDENTIALS=src/service-account-key.json
 
 # Required: Slack Integration
 SLACK_WEBHOOK_URL=your_slack_webhook_url
@@ -755,9 +744,9 @@ python -c "import os; print('DB Host:', os.getenv('PGHOST'))"
 
 ### Health Checks
 
-- **Dashboard**: http://localhost:8001/health
-- **Slack Endpoint**: http://localhost:8002/health
-- **API Documentation**: http://localhost:8001/docs
+- **Dashboard**: http://localhost:8080/health
+- **Slack Endpoint**: http://localhost:8080/slack/interactions
+- **API Documentation**: http://localhost:8080/docs
 
 ---
 
@@ -767,7 +756,7 @@ python -c "import os; print('DB Host:', os.getenv('PGHOST'))"
 
 - **✅ FULLY AUTOMATED SYSTEM**: Zero-maintenance operation with continuous email processing
 - **✅ Core Pipeline**: LangGraph workflow with conditional routing
-- **✅ Email Processing**: Gmail/Maildoso integration with service account auth + automated polling
+- **✅ Email Processing**: Nylas integration with service account auth + automated polling
 - **✅ Document Intelligence**: Google Drive integration with smart client matching
 - **✅ Vector Search**: AstraDB integration for email thread similarity
 - **✅ Draft Generation**: Contextual responses with template adherence
@@ -813,7 +802,7 @@ python -c "import os; print('DB Host:', os.getenv('PGHOST'))"
 ### 📊 **What You Get Out of the Box:**
 
 1. **🤖 Intelligent Email Processing**: AI-powered classification and response generation
-2. **📧 Multi-Source Email Integration**: Gmail + IMAP with automatic polling
+2. **📧 Multi-Source Email Integration**: Nylas with automatic polling
 3. **📁 Smart Document Retrieval**: Google Drive integration with context awareness
 4. **💬 Human-in-the-Loop**: Slack integration for quality control and approval
 5. **📊 Real-Time Analytics**: Comprehensive performance dashboard and metrics

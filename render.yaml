@@ -1,0 +1,79 @@
+services:
+  # Web service for the unified application
+  - type: web
+    name: bookingassistant
+    runtime: docker
+    repo: https://github.com/patrhick1/booking_assistant_v2
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    
+    # Instance configuration
+    plan: free  # Change to 'starter' or higher for production
+    
+    # Health check path
+    healthCheckPath: /health
+    
+    # Environment variables
+    envVars:
+      # Database
+      - key: PGDATABASE
+        fromDatabase:
+          name: bookingassistant-db
+          property: database
+      - key: PGUSER
+        fromDatabase:
+          name: bookingassistant-db
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: bookingassistant-db
+          property: password
+      - key: PGHOST
+        fromDatabase:
+          name: bookingassistant-db
+          property: host
+      - key: PGPORT
+        fromDatabase:
+          name: bookingassistant-db
+          property: port
+      
+      # Application settings
+      - key: TESTING_MODE
+        value: false
+      - key: MARK_EMAILS_AS_READ
+        value: false
+      
+      # You'll need to add these as environment variables in Render dashboard:
+      # - NYLAS_API_KEY
+      # - NYLAS_GRANT_ID
+      # - NYLAS_API_URI
+      # - OPENAI_API_KEY
+      # - ASTRA_DB_APPLICATION_TOKEN
+      # - ASTRA_DB_API_ENDPOINT
+      # - SLACK_WEBHOOK_URL
+      # - SLACK_BOT_TOKEN
+      # - GDRIVE_CLIENT_ROOT_FOLDER_ID
+      # - GOOGLE_APPLICATION_CREDENTIALS (as base64 encoded content)
+      # - DASHBOARD_USERNAME
+      # - DASHBOARD_PASSWORD
+      # - DASHBOARD_SECRET_KEY
+
+databases:
+  # PostgreSQL database
+  - name: bookingassistant-db
+    plan: free  # Change to 'starter' or higher for production
+    databaseName: bookingassistant
+    user: bookingassistant_user
+    
+    # Optional: IP allow list
+    # ipAllowList:
+    #   - source: 0.0.0.0/0
+    #     description: Allow all connections
+
+# Background workers (if needed)
+# - type: worker
+#   name: bookingassistant-email-processor
+#   runtime: docker
+#   dockerfilePath: ./Dockerfile
+#   dockerContext: .
+#   dockerCommand: python run_assistant.py

@@ -273,14 +273,35 @@ def draft_node(state: AgentState) -> dict:
     response = model.invoke(messages)
     draft = response.content
     
+    # Add consistent signature to all drafts
+    signature = "\n\nBest regards,\nAidrian\nPodcast Guest Relations Manager"
+    if not draft.strip().endswith(("Best regards,", "Aidrian", "Podcast Guest Relations Manager")):
+        draft = draft.rstrip() + signature
+    
     # Log draft metrics
-    placeholders_count = draft.count('[') + draft.count('{') # Simple placeholder count
+    # Modern drafts don't use [ or { as placeholders, so count quality indicators instead
+    draft_lower = draft.lower()
+    quality_indicators = 0
+    
+    # Check for greeting
+    if any(draft_lower.startswith(g) for g in ['hi', 'hello', 'dear', 'good morning', 'good afternoon']):
+        quality_indicators += 1
+    
+    # Check for closing
+    if any(c in draft_lower for c in ['best regards', 'sincerely', 'regards', 'thanks', 'thank you']):
+        quality_indicators += 1
+    
+    # Check for signature
+    if 'aidrian' in draft_lower:
+        quality_indicators += 1
+    
     metrics.log_draft_generation(
         draft_length=len(draft),
         context_used=context_used,
         context_length=context_length,
         vector_threads_used=len(state.get("relevant_threads", [])),
-        placeholders_count=placeholders_count
+        placeholders_count=quality_indicators,  # Using quality indicators instead of placeholders
+        draft_content=draft
     )
     metrics.end_node_timer("draft_generation", success=True, 
                          output_data={"draft_length": len(draft), "context_used": context_used})
@@ -333,6 +354,12 @@ def soft_rejection_drafting_node(state: AgentState) -> dict:
         start_idx = draft.find("<response>") + len("<response>")
         end_idx = draft.find("</response>")
         draft = draft[start_idx:end_idx].strip()
+    
+    # Add consistent signature to all drafts
+    signature = "\n\nBest regards,\nAidrian\nPodcast Guest Relations Manager"
+    if not draft.strip().endswith(("Best regards,", "Aidrian", "Podcast Guest Relations Manager")):
+        draft = draft.rstrip() + signature
+    
     return {"draft": draft}
 
 def edit_draft_node(state: AgentState) -> dict:
@@ -360,7 +387,13 @@ def edit_draft_node(state: AgentState) -> dict:
 
 def slack_notification_node(state: AgentState) -> dict:
     """Send enhanced interactive Slack notification for human review and feedback."""
+    print("\n🔔 SLACK NOTIFICATION NODE REACHED")
+    print(f"   Email from: {state.get('sender_email', 'Unknown')}")
+    print(f"   Subject: {state.get('subject', 'Unknown')}")
+    print(f"   TESTING_MODE: {os.getenv('TESTING_MODE', 'false')}")
+    
     if os.getenv("TESTING_MODE") == "true":
+        print("   ⏭️  Skipping Slack notification due to TESTING_MODE=true")
         return {"notification_status": "SKIPPED (Testing Mode)"}
     
     # Import the enhanced feedback service
@@ -378,6 +411,7 @@ def slack_notification_node(state: AgentState) -> dict:
     session_id = metrics.get_current_session_id()
     
     # Send enhanced interactive message with quality rating and feedback options
+    print("   📨 Sending Slack notification...")
     status_code = slack_feedback.create_enhanced_interactive_message(
         message=notification_message,
         draft=state["final_draft"],
