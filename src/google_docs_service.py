@@ -1,6 +1,7 @@
 # src/google_docs_service.py
 
 import os
+import json
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
@@ -20,35 +21,54 @@ class GoogleDocsService:
     Handles reading document content and listing files in folders.
     """
     def __init__(self):
-        # Try multiple sources for service account file
-        service_account_file = (
-            os.getenv('GMAIL_SERVICE_ACCOUNT_FILE') or 
-            os.getenv('GOOGLE_APPLICATION_CREDENTIALS') or
-            'service-account-key.json'
-        )
+        credentials = None
         
-        if not service_account_file or not os.path.exists(service_account_file):
+        # First try to get credentials from environment variable (JSON string)
+        google_creds_json = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
+        if google_creds_json:
+            try:
+                service_account_info = json.loads(google_creds_json)
+                credentials = service_account.Credentials.from_service_account_info(
+                    service_account_info, scopes=SCOPES)
+                print("✅ Google credentials loaded from environment variable")
+            except json.JSONDecodeError as e:
+                print(f"⚠️  Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON: {e}")
+            except Exception as e:
+                print(f"⚠️  Failed to create credentials from JSON: {e}")
+        
+        # Fall back to file-based credentials if JSON not available
+        if not credentials:
+            service_account_file = (
+                os.getenv('GMAIL_SERVICE_ACCOUNT_FILE') or 
+                os.getenv('GOOGLE_APPLICATION_CREDENTIALS') or
+                'service-account-key.json'
+            )
+            
+            if service_account_file and os.path.exists(service_account_file):
+                try:
+                    credentials = service_account.Credentials.from_service_account_file(
+                        service_account_file, scopes=SCOPES)
+                    print(f"✅ Google credentials loaded from file: {service_account_file}")
+                except Exception as e:
+                    print(f"⚠️  Failed to load credentials from file: {e}")
+        
+        # Initialize services if we have credentials
+        if credentials:
+            try:
+                self.docs_service = build('docs', 'v1', credentials=credentials)
+                self.drive_service = build('drive', 'v3', credentials=credentials)
+                print("✅ Google Docs and Drive services initialized")
+            except Exception as e:
+                print(f"⚠️  Failed to initialize Google services: {e}")
+                self.docs_service = None
+                self.drive_service = None
+        else:
             if os.getenv('TESTING_MODE') == 'true':
                 print("⚠️  Google Docs service unavailable in testing mode")
-                self.docs_service = None
-                self.drive_service = None
-                return
             else:
-                print(f"⚠️  Google service account file not found: {service_account_file}")
+                print("⚠️  No Google credentials available")
+                print("   Set GOOGLE_SERVICE_ACCOUNT_JSON env var with service account JSON")
                 print("   Google Drive and Docs features will be disabled.")
-                self.docs_service = None
-                self.drive_service = None
-                return
-        
-        try:
-            credentials = service_account.Credentials.from_service_account_file(
-                service_account_file, scopes=SCOPES)
-            self.docs_service = build('docs', 'v1', credentials=credentials)
-            self.drive_service = build('drive', 'v3', credentials=credentials)
-            print("✅ Google Docs and Drive services initialized")
-        except Exception as e:
-            print(f"⚠️  Failed to initialize GoogleDocsService: {e}")
-            print("   Google Drive and Docs features will be disabled.")
             self.docs_service = None
             self.drive_service = None
 
