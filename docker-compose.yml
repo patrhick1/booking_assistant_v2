@@ -15,6 +15,7 @@ services:
       PGPASSWORD: postgres
       
       # Application
+      APP_URL: ${APP_URL:-http://localhost:8080}
       TESTING_MODE: "false"
       MARK_EMAILS_AS_READ: "false"
       
